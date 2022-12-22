@@ -212,7 +212,7 @@ class MT5Trader:
 
 if __name__ == "__main__":
 
-    symbols = ['US30', 'GER30', 'US100']
+    symbols = ['US30.cash', 'GER40.cash', 'US100.cash']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
