@@ -7,42 +7,18 @@ from scipy.stats import spearmanr
 import MetaTrader5 as mt5
 import talib
 from dotenv import load_dotenv
-import sentry_sdk
-from sentry_sdk.integrations.flask import FlaskIntegration
 import os
 #from sympy import symbols
 import time
 warnings.filterwarnings("ignore")
 
 #Tozvitangidza hedu zve ehe quant chii chii
-
-
 load_dotenv()
 
 # Load environment variables
-live_trading = int(os.getenv("LIVE_TRADING"))
-
-if live_trading == 1:
-    mt_login_id = int(os.getenv("METATRADER_LOGIN_ID_PROD"))
-    mt_password = os.getenv("METATRADER_PASSWORD_PROD")
-    mt_server_name = os.getenv("METATRADER_SERVER_PROD")
-
-else:
-    mt_login_id = int(os.getenv("METATRADER_LOGIN_ID_DEMO"))
-    mt_password = os.getenv("METATRADER_PASSWORD_DEMO")
-    mt_server_name = os.getenv("METATRADER_SERVER_DEMO")
-
-
-# Setup for Sentry
-environment='prod' if live_trading == 1 else 'demo'
-
-sentry_sdk.init(
-    dsn=os.getenv('SENTRY_DSN'),
-    integrations=[FlaskIntegration()],
-    traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE')),
-    environment=environment,
-)
-
+mt_login_id = int(os.getenv("mt_login_id"))
+mt_password = os.getenv("mt_password")
+mt_server_name = os.getenv("mt_server_name")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
@@ -63,7 +39,7 @@ class MT5Trader:
         self.ger30 = np.array([])
         #*******************************************************************************************
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1):
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1): #changed timframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -248,7 +224,7 @@ if __name__ == "__main__":
         # Launch the algorithm
         current_timestamp = int(time.time())
 
-        if (current_timestamp - last_action_timestamp) > 3600:
+        if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
 
             if datetime.now().weekday() not in (5,6):
                 
