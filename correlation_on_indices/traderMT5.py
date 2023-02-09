@@ -39,7 +39,7 @@ class MT5Trader:
         self.ger30 = np.array([])
         #*******************************************************************************************
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M1): #changed timframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1): #changed timframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -164,14 +164,14 @@ class MT5Trader:
 
         #if not self.Invested:
         #if self.lastmom > 0:
-        if self.corr > -0.8 and self.corr < 0.8:
+        if self.corr > -0.4 and self.corr < 0.4:
             if len(us30_positions) == 0:
                 self.orders(self.symbols[0])
                 print(f"OPEN LONG TRADE: {self.result}")
             if len(ger30_positions) == 0:    
                 self.orders(self.symbols[1])
                 print(f"OPEN LONG TRADE: {self.result}")           
-        if self.corr2 > -0.0 and self.corr2 < 0.8:
+        if self.corr2 > -0.4 and self.corr2 < 0.4:
             if len(nas100_positions) == 0:
                 self.orders(self.symbols[2])
                 print(f"OPEN LONG TRADE: {self.result}")
