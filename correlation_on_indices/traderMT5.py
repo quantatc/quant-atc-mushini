@@ -39,7 +39,7 @@ class MT5Trader:
         self.ger30 = np.array([])
         #*******************************************************************************************
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1): #changed timframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M1): #changed timframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -83,7 +83,7 @@ class MT5Trader:
             "magic": 222222,
             "comment": "correlation algo order",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
         }
         # send a trading request
         self.result = mt5.order_send(request)
@@ -118,7 +118,7 @@ class MT5Trader:
                "magic": 222222,
                "comment": "correlation algo order",
                "type_time": mt5.ORDER_TIME_GTC,
-               "type_filling": mt5.ORDER_FILLING_IOC,
+               "type_filling": mt5.ORDER_FILLING_FOK,
            }
         # send a trading request
         self.res = mt5.order_send(request)
@@ -163,18 +163,18 @@ class MT5Trader:
             self.Invested = True
 
         #if not self.Invested:
-        if self.lastmom > 0:
-            if self.corr > -0.4 and self.corr < 0.4:
-                if len(us30_positions) == 0:
-                    self.orders(self.symbols[0])
-                    print(f"OPEN LONG TRADE: {self.result}")
-                if len(ger30_positions) == 0:    
-                    self.orders(self.symbols[1])
-                    print(f"OPEN LONG TRADE: {self.result}")           
-            if self.corr2 > -0.4 and self.corr2 < 0.4:
-                if len(nas100_positions) == 0:
-                    self.orders(self.symbols[2])
-                    print(f"OPEN LONG TRADE: {self.result}")
+        #if self.lastmom > 0:
+        if self.corr > -0.8 and self.corr < 0.8:
+            if len(us30_positions) == 0:
+                self.orders(self.symbols[0])
+                print(f"OPEN LONG TRADE: {self.result}")
+            if len(ger30_positions) == 0:    
+                self.orders(self.symbols[1])
+                print(f"OPEN LONG TRADE: {self.result}")           
+        if self.corr2 > -0.0 and self.corr2 < 0.8:
+            if len(nas100_positions) == 0:
+                self.orders(self.symbols[2])
+                print(f"OPEN LONG TRADE: {self.result}")
 
         elif self.Invested:
             for position in positions:
@@ -213,19 +213,20 @@ class MT5Trader:
 if __name__ == "__main__":
 
     #symbols = ['US30.cash', 'GER40.cash', 'US100.cash']
-    symbols = ['US30', 'DE30', 'US100']
+    #symbols = ['US30', 'DE30', 'US100']
+    symbols = ['DJI30', 'DAX40', 'NQ100']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MT5Trader(symbols=symbols, lot_size=0.05)
+    trader = MT5Trader(symbols=symbols, lot_size=2.5)
 
     while True:
 
         # Launch the algorithm
         current_timestamp = int(time.time())
 
-        if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
+        if (current_timestamp - last_action_timestamp) > 60: #changed to 60 from 3600
 
             if datetime.now().weekday() not in (5,6):
                 
@@ -243,7 +244,7 @@ if __name__ == "__main__":
 
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 600:
+        if (current_timestamp - last_display_timestamp) > 60:
 
             trader.display_correlation()
 
