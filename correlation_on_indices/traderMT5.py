@@ -226,7 +226,7 @@ if __name__ == "__main__":
         # Launch the algorithm
         current_timestamp = int(time.time())
 
-        if (current_timestamp - last_action_timestamp) > 60: #changed to 60 from 3600
+        if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
 
             if datetime.now().weekday() not in (5,6):
                 
@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 60:
+        if (current_timestamp - last_display_timestamp) > 600:
 
             trader.display_correlation()
 
