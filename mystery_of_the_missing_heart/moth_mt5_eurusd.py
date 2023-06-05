@@ -6,6 +6,7 @@ from functools import reduce
 import talib
 import time
 import logging
+from time import sleep
 from dotenv import load_dotenv
 import os
 

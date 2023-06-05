@@ -7,6 +7,7 @@ import talib
 import time
 import logging
 from dotenv import load_dotenv
+from time import sleep
 import os
 
 load_dotenv()

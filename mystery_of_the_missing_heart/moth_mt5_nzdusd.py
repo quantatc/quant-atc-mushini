@@ -5,6 +5,7 @@ import numpy as np
 from functools import reduce
 import talib
 import time
+from time import sleep
 import logging
 from dotenv import load_dotenv
 import os
