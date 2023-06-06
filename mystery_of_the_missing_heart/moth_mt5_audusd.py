@@ -68,8 +68,16 @@ class MysteryOfTheMissingHeart:
 
     def place_order(self, order_type, sl_price, tp_price):
         # point = mt5.symbol_info(self.symbol).point
-        price = mt5.symbol_info_tick(self.symbol).last
+        #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
+        tick = mt5.symbol_info_tick(self.symbol)
+        symbol_info = mt5.symbol_info(self.symbol)
+        
+        if order_type == mt5.ORDER_TYPE_BUY:
+            price = tick.ask
+        elif order_type == mt5.ORDER_TYPE_SELL:
+            price = tick.bid
+        
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": self.symbol,
@@ -79,7 +87,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 654321,
+            "magic": 111301,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -150,19 +158,25 @@ class MysteryOfTheMissingHeart:
         if not 23 <= datetime.utcnow().hour <= 3:
             self.define_strategy()
             is_long = self.check_position(self.symbol)
+            # check if we are invested
+            positions_total = mt5.positions_total()
+            if positions_total > 0: 
+                self.Invested = True
 
             price = self.price
             z_score = self.z_score
             atr = self.atr
             logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
-            if z_score > self.upper_threshold and not is_long:
-                min_stop = round(price - self.sl_factor * atr, 5)
-                target_profit = round(price + self.tp_factor * atr, 5)
-                self.place_order(mt5.ORDER_TYPE_SELL, min_stop, target_profit)
-            elif z_score < self.lower_threshold and is_long:
-                min_stop = round(price + self.sl_factor * atr, 5)
-                target_profit = round(price - self.tp_factor * atr, 5)
-                self.place_order(mt5.ORDER_TYPE_BUY, min_stop, target_profit)
+            
+            if not self.Invested:
+                if z_score > self.upper_threshold and not is_long:
+                    min_stop = round(price + self.sl_factor * atr, 6)
+                    target_profit = round(price - self.tp_factor * atr, 6)
+                    self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                elif z_score < self.lower_threshold and is_long:
+                    min_stop = round(price - self.sl_factor * atr, 6)
+                    target_profit = round(price + self.tp_factor * atr, 6)
+                    self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
@@ -171,7 +185,7 @@ if __name__ == "__main__":
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbol, lot_size=0.9)
+    trader = MysteryOfTheMissingHeart(symbol, lot_size=0.1)
 
     while True:
         # Launch the algorithm
