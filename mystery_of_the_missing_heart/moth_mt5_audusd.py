@@ -155,28 +155,27 @@ class MysteryOfTheMissingHeart:
     def execute_trades(self):
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-        if not 23 <= datetime.utcnow().hour <= 3:
-            self.define_strategy()
-            is_long = self.check_position(self.symbol)
-            # check if we are invested
-            positions_total = mt5.positions_total()
-            if positions_total > 0: 
-                self.Invested = True
+        self.define_strategy()
+        is_long = self.check_position(self.symbol)
+        # check if we are invested
+        positions_total = mt5.positions_total()
+        if positions_total > 0: 
+            self.Invested = True
 
-            price = self.price
-            z_score = self.z_score
-            atr = self.atr
-            logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
-            
-            if not self.Invested:
-                if z_score > self.upper_threshold and not is_long:
-                    min_stop = round(price + self.sl_factor * atr, 6)
-                    target_profit = round(price - self.tp_factor * atr, 6)
-                    self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                elif z_score < self.lower_threshold and is_long:
-                    min_stop = round(price - self.sl_factor * atr, 6)
-                    target_profit = round(price + self.tp_factor * atr, 6)
-                    self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+        price = self.price
+        z_score = self.z_score
+        atr = self.atr
+        logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
+        
+        if not self.Invested:
+            if z_score > self.upper_threshold and not is_long:
+                min_stop = round(price + self.sl_factor * atr, 6)
+                target_profit = round(price - self.tp_factor * atr, 6)
+                self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            elif z_score < self.lower_threshold and is_long:
+                min_stop = round(price - self.sl_factor * atr, 6)
+                target_profit = round(price + self.tp_factor * atr, 6)
+                self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
@@ -192,16 +191,17 @@ if __name__ == "__main__":
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
             if datetime.now().weekday() not in (5,6):
-                # Account Info
-                current_account_info = mt5.account_info()
-                print("------------------------------------------------------------------------------------------")
-                print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                print(f"Balance: {current_account_info.balance} USD,\t"
-                    f"Equity: {current_account_info.equity} USD, \t"
-                    f"Profit: {current_account_info.profit} USD")
-                print("-------------------------------------------------------------------------------------------")
-                # Close all trades
-                trader.execute_trades()
+                if not 23 <= datetime.now().hour <= 3:
+                    # Account Info
+                    current_account_info = mt5.account_info()
+                    print("------------------------------------------------------------------------------------------")
+                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    print(f"Balance: {current_account_info.balance} USD,\t"
+                        f"Equity: {current_account_info.equity} USD, \t"
+                        f"Profit: {current_account_info.profit} USD")
+                    print("-------------------------------------------------------------------------------------------")
+                    # Close all trades
+                    trader.execute_trades()
             last_action_timestamp = int(time.time())
         
         if (current_timestamp - last_display_timestamp) > 3600:
