@@ -185,14 +185,18 @@ if __name__ == "__main__":
             if datetime.now().weekday() not in (5,6):
                 if not 23 <= datetime.now().hour <= 3:
                     # Account Info
-                    current_account_info = mt5.account_info()
-                    print("------------------------------------------------------------------------------------------")
-                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"Balance: {current_account_info.balance} USD,\t"
-                        f"Equity: {current_account_info.equity} USD, \t"
-                        f"Profit: {current_account_info.profit} USD")
-                    print("-------------------------------------------------------------------------------------------")
-                    # Close all trades
+                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                        current_account_info = mt5.account_info()
+                        print("------------------------------------------------------------------------------------------")
+                        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        if current_account_info is not None:
+                            print(f"Balance: {current_account_info.balance} USD,\t"
+                                  f"Equity: {current_account_info.equity} USD, \t"
+                                  f"Profit: {current_account_info.profit} USD")
+                        else:
+                            print("Failed to retrieve account information.")
+                        print("-------------------------------------------------------------------------------------------")
+                    # Look for trades
                     trader.execute_trades()
             last_action_timestamp = int(time.time())
         
