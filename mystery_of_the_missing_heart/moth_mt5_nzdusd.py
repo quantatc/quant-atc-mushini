@@ -79,7 +79,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 888351,
+            "magic": 888355,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -160,13 +160,13 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
         
         if not self.Invested:
-            if z_score > self.upper_threshold and not is_long:
-                min_stop = round(price + self.sl_factor * atr, 6)
-                target_profit = round(price - self.tp_factor * atr, 6)
+            if z_score > self.upper_threshold:
+                min_stop = round(price + (self.sl_factor * atr), 6)
+                target_profit = round(price - (self.tp_factor * atr), 6)
                 self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-            elif z_score < self.lower_threshold and is_long:
-                min_stop = round(price - self.sl_factor * atr, 6)
-                target_profit = round(price + self.tp_factor * atr, 6)
+            elif z_score < self.lower_threshold:
+                min_stop = round(price - (self.sl_factor * atr), 6)
+                target_profit = round(price + (self.tp_factor * atr), 6)
                 self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     while True:
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
+        if (current_timestamp - last_action_timestamp) > 3600:#changed to 60 from 3600
             if datetime.now().weekday() not in (5,6):
                 if not 23 <= datetime.now().hour <= 3:
                     # Account Info

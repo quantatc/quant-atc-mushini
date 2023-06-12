@@ -168,13 +168,13 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
         
         if not self.Invested:
-            if z_score > self.upper_threshold and not is_long:
-                min_stop = round(price + self.sl_factor * atr, 6)
-                target_profit = round(price - self.tp_factor * atr, 6)
+            if z_score > self.upper_threshold:
+                min_stop = round(price + (self.sl_factor * atr), 6)
+                target_profit = round(price - (self.tp_factor * atr), 6)
                 self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-            elif z_score < self.lower_threshold and is_long:
-                min_stop = round(price - self.sl_factor * atr, 6)
-                target_profit = round(price + self.tp_factor * atr, 6)
+            elif z_score < self.lower_threshold:
+                min_stop = round(price - (self.sl_factor * atr), 6)
+                target_profit = round(price + (self.tp_factor * atr), 6)
                 self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
