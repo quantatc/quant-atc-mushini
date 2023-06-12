@@ -23,8 +23,7 @@ class MysteryOfTheMissingHeart:
     sl_factor = 3
     tp_factor = 1
     upper_threshold = 0
-    lower_threshold = -0.5
-    self.Invested = None 
+    lower_threshold = -0.5 
     #exit_threshold = 0.01
 
     def __init__(self, symbol, lot_size):
@@ -32,7 +31,7 @@ class MysteryOfTheMissingHeart:
         self.lot = lot_size
         self.order_result_comment = None
         self.pos_summary = None
-        self.Invested = False
+        self.Invested = None
         if not mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
             quit()
