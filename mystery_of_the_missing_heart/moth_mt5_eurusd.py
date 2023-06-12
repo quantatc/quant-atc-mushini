@@ -24,6 +24,7 @@ class MysteryOfTheMissingHeart:
     tp_factor = 1
     upper_threshold = 0
     lower_threshold = -0.5
+    self.Invested = None 
     #exit_threshold = 0.01
 
     def __init__(self, symbol, lot_size):
@@ -148,18 +149,18 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         self.define_strategy()
-        is_long = self.check_position(self.symbol)
         # check if we are invested
-        positions_total = mt5.positions_total()
-        if positions_total > 0: 
-            self.Invested = True
+        self.Invested = self.check_position(self.symbol)
+        #positions_total = mt5.positions_total()
+        #if positions_total > 0: 
+        #    self.Invested = True
 
         price = self.price
         z_score = self.z_score
         atr = self.atr
         logging.info(f'Z-score: {z_score}, ATR: {atr}, Last Price:   {price}')
         
-        if not self.Invested:
+        if self.Invested == None:
             if z_score > self.upper_threshold:
                 min_stop = round(price + (self.sl_factor * atr), 6)
                 target_profit = round(price - (self.tp_factor * atr), 6)
