@@ -5,8 +5,8 @@ import numpy as np
 from functools import reduce
 import talib
 import time
-import logging
 from time import sleep
+import logging
 from dotenv import load_dotenv
 import os
 
@@ -22,20 +22,22 @@ if not mt_login_id or not mt_password or not mt_server_name:
 class MysteryOfTheMissingHeart:
     sl_factor = 3
     tp_factor = 1
-    upper_threshold = 0
-    lower_threshold = -0.5 
+    upper_threshold = 1
+    lower_threshold = 0
     #exit_threshold = 0.01
 
-    def __init__(self, symbol, lot_size):
-        self.symbol = symbol
+    def __init__(self, symbols, lot_size):
+        self.symbols = symbols
         self.lot = lot_size
         self.order_result_comment = None
         self.pos_summary = None
+        #self.Invested = None
         if not mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
             quit()
-        if self.check_symbol(self.symbol):
-            print(f"Symbol {self.symbol} is in the Market Watch.")
+        for symbol in self.symbols:
+            if self.check_symbol(symbol):
+                print(f"Symbol {symbol} is in the Market Watch.")
         if self.check_symbol('DX.f'):
             print("Symbol USDx is in the Market Watch.")
             
@@ -65,20 +67,28 @@ class MysteryOfTheMissingHeart:
         data = data.set_index('time')
         return data
 
-    def place_order(self, order_type, sl_price, tp_price):
+    def place_order(self, symbol, order_type, sl_price, tp_price):
         # point = mt5.symbol_info(self.symbol).point
-        price = mt5.symbol_info_tick(self.symbol).last
+        #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
+        tick = mt5.symbol_info_tick(symbol)
+        symbol_info = mt5.symbol_info(symbol)
+        
+        if order_type == mt5.ORDER_TYPE_BUY:
+            price = tick.ask
+        elif order_type == mt5.ORDER_TYPE_SELL:
+            price = tick.bid
+        
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": self.symbol,
+            "symbol": symbol,
             "volume": self.lot,
             "type": order_type,
             "price": price,
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 444331,
+            "magic": 177311,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -93,35 +103,35 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Order placed successfully: {result}')
         return True
     
-    def define_strategy(self):
+    def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
         usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
-        symbol_df = self.get_hist_data(self.symbol, 120).dropna()
-        symbol_close = symbol_df["close"].rename(self.symbol)
+        symbol_df = self.get_hist_data(symbol, 120).dropna()
+        symbol_close = symbol_df["close"].rename(symbol)
         dfs = [usdx, symbol_close]
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
         merged_data.dropna(inplace=True)
 
         #price
-        self.price = symbol_df["close"].iloc[-1]
+        price = symbol_df["close"].iloc[-1]
 
         #atr
-        atr = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
-        self.atr = atr[-1]
+        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
+        atr = atrs[-1]
         
         #z_scores
-        spread = merged_data["usdx"] - merged_data[self.symbol]
+        spread = merged_data["usdx"] - merged_data[symbol]
         rolling_mean = spread.rolling(window=20).mean()
         rolling_std = spread.rolling(window=20).std()
-        z_score = (spread - rolling_mean) / rolling_std
-        self.z_score = z_score.iloc[-1]
+        z_scores = (spread - rolling_mean) / rolling_std
+        z_score = z_scores.iloc[-1]
 
         #logging plus debugging
-        #print(f"Price:   {self.price}, ATR:  {self.atr}")
-        #print(f"Z-Score:   {self.z_score}")
+        #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
+        return price, atr, z_score
     
     def check_position(self, symbol):
         """Checks the most recent position for a specific symbol. Returns True if LONG, False if SHORT."""
@@ -137,44 +147,40 @@ class MysteryOfTheMissingHeart:
         position = positions[-1]
 
         if position.type == mt5.ORDER_TYPE_BUY:
-            print(f'{self.symbol}: Long position')
+            print(f'{symbol}: Long position')
             return True  # It's a long position
         elif position.type == mt5.ORDER_TYPE_SELL:
-            print(f'{self.symbol}: Short position')
+            print(f'{symbol}: Short position')
             return False  # It's a short position
         
     def execute_trades(self):
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-        self.define_strategy()
-        # check if we are invested
-        #self.Invested = self.check_position(self.symbol)
-        #positions_total = mt5.positions_total()
-        #if positions_total > 0: 
-        #    self.Invested = True
-        price = self.price
-        z_score = self.z_score
-        atr = self.atr
-        logging.info(f'Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
-        print(f'Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
 
-        if z_score > self.upper_threshold:
-            min_stop = round(price + (self.sl_factor * atr), 6)
-            target_profit = round(price - (self.tp_factor * atr), 6)
-            self.place_order(mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-        elif z_score < self.lower_threshold:
-            min_stop = round(price - (self.sl_factor * atr), 6)
-            target_profit = round(price + (self.tp_factor * atr), 6)
-            self.place_order(mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+        for symbol in self.symbols:
+            price, atr, z_score = self.define_strategy(symbol)
+            # check if we are invested
+            #self.Invested = self.check_position(symbol)
+            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
+            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
+            
+            if z_score > self.upper_threshold:
+                min_stop = round(price + (self.sl_factor * atr), 6)
+                target_profit = round(price - (self.tp_factor * atr), 6)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            elif z_score < self.lower_threshold:
+                min_stop = round(price - (self.sl_factor * atr), 6)
+                target_profit = round(price + (self.tp_factor * atr), 6)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
-    symbol = 'EURUSD'
+    symbols = ['AUDUSD', 'GBPUSD', 'NZDUSD']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbol, lot_size=3.0)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=3.0)
 
     while True:
         # Launch the algorithm
@@ -198,9 +204,10 @@ if __name__ == "__main__":
                     trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 3600:
-            trader.check_position(symbol)
-            last_display_timestamp = int(time.time())
+        for symbol in symbols:
+            if (current_timestamp - last_display_timestamp) > 3600:
+                trader.check_position(symbol)
+                last_display_timestamp = int(time.time())
            
         # to avoid excessive cpu usage because loop running lightning fast
         sleep(30)
