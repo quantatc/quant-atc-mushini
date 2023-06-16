@@ -133,25 +133,27 @@ class MysteryOfTheMissingHeart:
         #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
         return price, atr, z_score
     
-    def check_position(self, symbol):
+    def check_position(self):
         """Checks the most recent position for a specific symbol. Returns True if LONG, False if SHORT."""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-        positions = mt5.positions_get(symbol=symbol)
 
-        if positions == None or len(positions) == 0:
-            print("No positions found for symbol {}".format(symbol))
-            return None
-        
-        # Check the most recent position (last in the list)
-        position = positions[-1]
+        for symbol in self.symbols:
+            positions = mt5.positions_get(symbol=symbol)
 
-        if position.type == mt5.ORDER_TYPE_BUY:
-            print(f'{symbol}: Long position')
-            return True  # It's a long position
-        elif position.type == mt5.ORDER_TYPE_SELL:
-            print(f'{symbol}: Short position')
-            return False  # It's a short position
+            if positions == None or len(positions) == 0:
+                print("No positions found for symbol {}".format(symbol))
+                return None
+            
+            # Check the most recent position (last in the list)
+            position = positions[-1]
+
+            if position.type == mt5.ORDER_TYPE_BUY:
+                print(f'{symbol}: Long position')
+                return True  # It's a long position
+            elif position.type == mt5.ORDER_TYPE_SELL:
+                print(f'{symbol}: Short position')
+                return False  # It's a short position
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -204,10 +206,9 @@ if __name__ == "__main__":
                     trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        for symbol in symbols:
-            if (current_timestamp - last_display_timestamp) > 3600:
-                trader.check_position(symbol)
-                last_display_timestamp = int(time.time())
+        if (current_timestamp - last_display_timestamp) > 3600:
+            trader.check_position()
+            last_display_timestamp = int(time.time())
            
         # to avoid excessive cpu usage because loop running lightning fast
         sleep(30)
