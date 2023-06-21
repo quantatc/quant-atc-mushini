@@ -74,7 +74,7 @@ class MysteryOfTheMissingHeart:
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
         usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
         usdx_yahoo = usdx_yahoo[:-1]
-        usdx_yahoo.index = usdx_yahoo.index.tz_convert('UTC')
+        usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
         return usdx_yahoo
 
     def place_order(self, symbol, order_type, sl_price, tp_price):
