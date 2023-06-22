@@ -74,11 +74,11 @@ class MysteryOfTheMissingHeart:
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
         usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
         usdx_yahoo = usdx_yahoo[:-1]
-        usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
+        usdx_yahoo.index = usdx_yahoo.index.tz_convert('UTC')
         return usdx_yahoo
 
     def place_order(self, symbol, order_type, sl_price, tp_price):
-        # point = mt5.symbol_info(self.symbol).point
+        #point = mt5.symbol_info(self.symbol).point
         #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
         tick = mt5.symbol_info_tick(symbol)
@@ -158,14 +158,14 @@ class MysteryOfTheMissingHeart:
                 return None
             
             # Check the most recent position (last in the list)
-            position = positions[-1]
-
-            if position.type == mt5.ORDER_TYPE_BUY:
-                print(f'{symbol}: Long position')
-                return True  # It's a long position
-            elif position.type == mt5.ORDER_TYPE_SELL:
-                print(f'{symbol}: Short position')
-                return False  # It's a short position
+            #position = positions[-1]
+            for position in positions:
+                if position.type == mt5.ORDER_TYPE_BUY:
+                    print(f'{symbol}: Long position')
+                    return True  # It's a long position
+                elif position.type == mt5.ORDER_TYPE_SELL:
+                    print(f'{symbol}: Short position')
+                    return False  # It's a short position
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -173,28 +173,29 @@ class MysteryOfTheMissingHeart:
 
         for symbol in self.symbols:
             price, atr, z_score = self.define_strategy(symbol)
+            tick = mt5.symbol_info_tick(symbol)
             # check if we are invested
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             
             if z_score > self.upper_threshold:
-                min_stop = round(price + (self.sl_factor * atr), 6)
-                target_profit = round(price - (self.tp_factor * atr), 6)
+                min_stop = round(tick.bid + (self.sl_factor * atr), 5)
+                target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
             elif z_score < self.lower_threshold:
-                min_stop = round(price - (self.sl_factor * atr), 6)
-                target_profit = round(price + (self.tp_factor * atr), 6)
+                min_stop = round(tick.ask - (self.sl_factor * atr), 5)
+                target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
-    symbols = ['AUDUSD', 'GBPUSD', 'NZDUSD']
+    symbols = ['AUDUSDm', 'GBPUSDm', 'NZDUSDm', 'EURUSDm']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.6)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.5)
 
     while True:
         # Launch the algorithm
