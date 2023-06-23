@@ -14,9 +14,9 @@ import os
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id"))
-mt_password = os.getenv("mt_password")
-mt_server_name = os.getenv("mt_server_name")
+mt_login_id = int(os.getenv("mt_login_id2"))
+mt_password = os.getenv("mt_password2")
+mt_server_name = os.getenv("mt_server_name2")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
