@@ -190,7 +190,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ['AUDUSDm', 'GBPUSDm', 'NZDUSDm', 'EURUSDm']
+    symbols = ['AUDUSD', 'GBPUSD', 'NZDUSD', 'EURUSD']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
