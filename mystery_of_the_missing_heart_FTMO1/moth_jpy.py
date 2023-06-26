@@ -195,7 +195,7 @@ if __name__ == "__main__":
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=3)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=1.5)
 
     while True:
         # Launch the algorithm
