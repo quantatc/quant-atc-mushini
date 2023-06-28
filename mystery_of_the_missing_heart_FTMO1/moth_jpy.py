@@ -131,7 +131,7 @@ class MysteryOfTheMissingHeart:
         price = symbol_df["close"].iloc[-1]
 
         #atr
-        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
+        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=10)
         atr = atrs[-1]
         
         #z_scores

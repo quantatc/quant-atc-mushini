@@ -23,9 +23,11 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 3
-    tp_factor = 1.5
+    tp_factor = 1
     upper_threshold = 1
     lower_threshold = 0
+    upper_bound = 2.5
+    lower_bound = -1
     #exit_threshold = 0.01
 
     def __init__(self, symbols, lot_size):
@@ -113,6 +115,34 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Order placed successfully: {result}')
         return True
     
+    def close_positions(self, position):
+        """ Function to close a specific position """
+        # Initialize the connection if there is not
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+
+        tick = mt5.symbol_info_tick(position.symbol)
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": position.volume,
+            "type": mt5.ORDER_TYPE_BUY if position.type == mt5.ORDER_TYPE_SELL else mt5.ORDER_TYPE_SELL,
+            "position": position.ticket,
+            "price": tick.ask if position.type == mt5.ORDER_TYPE_BUY else tick.bid,
+            "deviation": 20,
+            "magic": 333333,
+            "comment": "correlation algo order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        # Send a trading request
+        result = mt5.order_send(request)
+        if result is None:
+            print("Failed to close position.")
+        elif result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to close position: {result.comment}")
+        else:
+            print(f"Closed position: {position.symbol} ({position.volume} lots)")
+    
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
@@ -166,6 +196,16 @@ class MysteryOfTheMissingHeart:
                 elif position.type == mt5.ORDER_TYPE_SELL:
                     print(f'{symbol}: Short position')
                     return False  # It's a short position
+    
+    def close_all_positions(self):
+        """ Function to close all open positions """
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+        positions = mt5.positions_get()
+        if positions is None or len(positions) == 0:
+            print("No open positions to close.")
+        else:
+            for position in positions:
+                self.close_positions(position)
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -179,18 +219,18 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             
-            if z_score > self.upper_threshold:
+            if self.upper_threshold <= z_score <= self.upper_bound:
                 min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                 target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-            elif z_score < self.lower_threshold:
+            elif self.lower_bound <= z_score <= self.lower_threshold:
                 min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                 target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
-    symbols = ['AUDUSDm', 'GBPUSDm', 'NZDUSDm', 'EURUSDm']
+    symbols = ['AUDUSDm', 'EURUSDm']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
@@ -201,23 +241,26 @@ if __name__ == "__main__":
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) > 3600: #changed to 60 from 3600
-            if datetime.now().weekday() not in (5,6):
-                if not 23 <= datetime.now().hour <= 3:
-                    # Account Info
-                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                        current_account_info = mt5.account_info()
-                        print("------------------------------------------------------------------------------------------")
-                        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                        if current_account_info is not None:
-                            print(f"Balance: {current_account_info.balance} USD,\t"
-                                  f"Equity: {current_account_info.equity} USD, \t"
-                                  f"Profit: {current_account_info.profit} USD")
-                        else:
-                            print("Failed to retrieve account information.")
-                        print("-------------------------------------------------------------------------------------------")
-                    # Look for trades
-                    trader.execute_trades()
-            last_action_timestamp = int(time.time())
+            if datetime.now().weekday() == 4 and datetime.now().hour >= 22:
+                trader.close_all_positions()
+            else:
+                if datetime.now().weekday() not in (5,6):
+                    if not 23 <= datetime.now().hour <= 3:
+                        # Account Info
+                        if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                            current_account_info = mt5.account_info()
+                            print("------------------------------------------------------------------------------------------")
+                            print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                            if current_account_info is not None:
+                                print(f"Balance: {current_account_info.balance} USD,\t"
+                                    f"Equity: {current_account_info.equity} USD, \t"
+                                    f"Profit: {current_account_info.profit} USD")
+                            else:
+                                print("Failed to retrieve account information.")
+                            print("-------------------------------------------------------------------------------------------")
+                        # Look for trades
+                        trader.execute_trades()
+                last_action_timestamp = int(time.time())
         
         if (current_timestamp - last_display_timestamp) > 3600:
             trader.check_position()
