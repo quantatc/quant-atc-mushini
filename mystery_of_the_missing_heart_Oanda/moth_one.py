@@ -23,7 +23,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 3
-    tp_factor = 1
+    tp_factor = 1.5
     upper_threshold = 1
     lower_threshold = 0
     upper_bound = 2.5
