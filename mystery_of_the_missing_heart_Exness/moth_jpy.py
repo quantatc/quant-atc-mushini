@@ -23,7 +23,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 3
-    tp_factor = 1.5
+    tp_factor = 1
     upper_threshold = 0.5
     lower_threshold = -0.5
     #exit_threshold = 0.01
@@ -180,12 +180,12 @@ class MysteryOfTheMissingHeart:
             print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             
             if z_score > self.upper_threshold:
-                min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                target_profit = round(tick.bid - (self.tp_factor * atr), 5)
+                min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                target_profit = round(tick.ask - (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
             elif z_score < self.lower_threshold:
-                min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                target_profit = round(tick.ask + (self.tp_factor * atr), 5)
+                min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                target_profit = round(tick.bid + (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
