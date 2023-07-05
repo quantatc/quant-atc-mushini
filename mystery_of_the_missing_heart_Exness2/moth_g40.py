@@ -23,7 +23,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1.5
-    tp_factor = 2
+    tp_factor = 2.5
     BCount = 1
     PullBack = 1
     ExitBars = 1
@@ -130,7 +130,7 @@ class MysteryOfTheMissingHeart:
         signal = symbol_df['Signal'].iloc[-1]
 
         #logging plus debugging
-        print(f"Signals:   {symbol_df['Signal'].tail()}")
+        #print(f"Signals:   {symbol_df['Signal'].tail()}")
         return atr, signal
     
     def check_position(self):
