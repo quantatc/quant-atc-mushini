@@ -190,30 +190,31 @@ if __name__ == "__main__":
     while True:
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 300: #changed to 300 from 3600
-            if datetime.now().weekday() not in (5,6):
-                if not 20 <= datetime.now().hour < 1:
-                    # Account Info
-                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                        current_account_info = mt5.account_info()
-                        print("------------------------------------------------------------------------------------------")
-                        print("EXNESS: GER40 HFT-LIKE STRATEGY")
-                        print("------------------------------------------------------------------------------------------")
-                        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                        if current_account_info is not None:
-                            print(f"Balance: {current_account_info.balance} USD,\t"
-                                  f"Equity: {current_account_info.equity} USD, \t"
-                                  f"Profit: {current_account_info.profit} USD")
-                        else:
-                            print("Failed to retrieve account information.")
-                        print("-------------------------------------------------------------------------------------------")
-                    # Look for trades
-                    trader.execute_trades()
-            last_action_timestamp = int(time.time())
-        
-        if (current_timestamp - last_display_timestamp) > 300:
+        current_datetime = datetime.now()
+
+        if (current_timestamp - last_action_timestamp) > 3600:  # changed to 60 from 3600
+            if current_datetime.weekday() < 5:  # Monday to Friday
+                # Account Info
+                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                    current_account_info = mt5.account_info()
+                    print("------------------------------------------------------------------------------------------")
+                    print("MOTH MOMENTUM STRATEGY: EXNESS HFT ACCOUNT")
+                    print("------------------------------------------------------------------------------------------")
+                    print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
+                    if current_account_info is not None:
+                        print(f"Balance: {current_account_info.balance} USD,\t"
+                                f"Equity: {current_account_info.equity} USD, \t"
+                                f"Profit: {current_account_info.profit} USD")
+                    else:
+                        print("Failed to retrieve account information.")
+                    print("-------------------------------------------------------------------------------------------")
+                # Look for trades
+                trader.execute_trades()
+                last_action_timestamp = int(time.time())
+
+        if (current_timestamp - last_display_timestamp) > 3600:
             trader.check_position()
             last_display_timestamp = int(time.time())
-           
-        # to avoid excessive cpu usage because loop running lightning fast
-        sleep(5)
+
+        # to avoid excessive CPU usage because the loop is running too fast
+        time.sleep(5)
