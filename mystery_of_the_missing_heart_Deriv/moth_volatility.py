@@ -27,9 +27,8 @@ class MysteryOfTheMissingHeart:
     PullBack = 1
     ExitBars = 1
 
-    def __init__(self, symbols, lot_size):
+    def __init__(self, symbols):
         self.symbols = symbols
-        self.lot = lot_size
         self.order_result_comment = None
         self.pos_summary = None
         #self.Invested = None
@@ -39,14 +38,6 @@ class MysteryOfTheMissingHeart:
         for symbol in self.symbols:
             if self.check_symbol(symbol):
                 print(f"Symbol {symbol} is in the Market Watch.")
-        
-        for symbol in self.symbols:
-            if symbol == "Step Index":
-                self.lot == 0.1
-            if symbol == "Volatility 10 Index":
-                self.lot == 0.30
-            if symbol == "Volatility 25 Index":
-                self.lot == 0.50
             
     def check_symbol(self, symbol):
         """Checks if a symbol is in the Market Watch. If it's not, the symbol is added."""
@@ -74,7 +65,7 @@ class MysteryOfTheMissingHeart:
         data = data.set_index('time')
         return data
 
-    def place_order(self, symbol, order_type, sl_price, tp_price):
+    def place_order(self, symbol, order_type, sl_price, tp_price, lotsize):
         #point = mt5.symbol_info(self.symbol).point
         #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
@@ -89,7 +80,7 @@ class MysteryOfTheMissingHeart:
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
-            "volume": self.lot,
+            "volume": lotsize,
             "type": order_type,
             "price": price,
             "sl": sl_price,
@@ -174,15 +165,22 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
             print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
             
+            if symbol == "Step Index":
+                lotsize == 0.1
+            if symbol == "Volatility 10 Index":
+                lotsize == 0.50
+            if symbol == "Volatility 25 Index":
+                lotsize == 0.70
+            
             if signal==1:
                 min_stop = round(tick.bid - (self.sl_factor * atr), 5)
                 target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize)
           
             if signal==-1:
                 min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                 target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize)
             
 
 if __name__ == "__main__":
@@ -192,7 +190,7 @@ if __name__ == "__main__":
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=None)
+    trader = MysteryOfTheMissingHeart(symbols)
 
     while True:
         # Launch the algorithm
