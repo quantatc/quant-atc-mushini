@@ -44,9 +44,9 @@ class MysteryOfTheMissingHeart:
             if symbol == "Step Index":
                 self.lot == 0.1
             if symbol == "Volatility 10 Index":
-                self.lot == 0.50
+                self.lot == 0.30
             if symbol == "Volatility 25 Index":
-                self.lot == 0.70
+                self.lot == 0.50
             
     def check_symbol(self, symbol):
         """Checks if a symbol is in the Market Watch. If it's not, the symbol is added."""
