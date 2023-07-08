@@ -39,6 +39,14 @@ class MysteryOfTheMissingHeart:
         for symbol in self.symbols:
             if self.check_symbol(symbol):
                 print(f"Symbol {symbol} is in the Market Watch.")
+        
+        for symbol in self.symbols:
+            if symbol == "Step Index":
+                self.lot == 0.1
+            if symbol == "Volatility 10 Index":
+                self.lot == 0.50
+            if symbol == "Volatility 25 Index":
+                self.lot == 0.70
             
     def check_symbol(self, symbol):
         """Checks if a symbol is in the Market Watch. If it's not, the symbol is added."""
@@ -53,7 +61,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M5): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -184,12 +192,12 @@ if __name__ == "__main__":
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.50)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=None)
 
     while True:
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 300:
+        if (current_timestamp - last_action_timestamp) > 900:
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
@@ -208,9 +216,9 @@ if __name__ == "__main__":
             trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 300:
+        if (current_timestamp - last_display_timestamp) > 900:
             trader.check_position()
             last_display_timestamp = int(time.time())
            
         # to avoid excessive cpu usage because loop running lightning fast
-        sleep(30)
+        sleep(1)
