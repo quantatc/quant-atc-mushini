@@ -164,25 +164,31 @@ class MysteryOfTheMissingHeart:
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
             print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
-            self.lotsize = 0.50
-            
-            if symbol == "Step Index":
-                self.lotsize == 0.1
-            if symbol == "Volatility 10 Index":
-                self.lotsize == 0.50
-            if symbol == "Volatility 25 Index":
-                self.lotsize == 0.70
-            
+
             if signal==1:
                 min_stop = round(tick.bid - (self.sl_factor * atr), 5)
                 target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
-          
+                if symbol == "Step Index":
+                    self.lotsize == 0.1
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
+                if symbol == "Volatility 10 Index":
+                    self.lotsize == 0.50
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
+                if symbol == "Volatility 25 Index":
+                    self.lotsize == 0.70
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
             if signal==-1:
                 min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                 target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
-            
+                if symbol == "Step Index":
+                    self.lotsize == 0.1
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
+                if symbol == "Volatility 10 Index":
+                    self.lotsize == 0.50
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
+                if symbol == "Volatility 25 Index":
+                    self.lotsize == 0.70
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=self.lotsize)
 
 if __name__ == "__main__":
 
