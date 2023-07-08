@@ -251,7 +251,7 @@ if __name__ == "__main__":
                     if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                         current_account_info = mt5.account_info()
                         print("------------------------------------------------------------------------------------------")
-                        print("OANDA LIVE ACCOUNT: MOTH CORRELATION STRATEGY")
+                        print("EXNESS DEMO ACCOUNT: MOTH CORRELATION STRATEGY")
                         print("------------------------------------------------------------------------------------------")
                         print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
                         if current_account_info is not None:
