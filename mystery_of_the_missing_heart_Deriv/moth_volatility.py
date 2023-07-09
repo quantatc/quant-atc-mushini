@@ -21,8 +21,8 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1.5
-    tp_factor = 2.5
+    sl_factor = 1
+    tp_factor = 1.5
     BCount = 1
     PullBack = 1
     ExitBars = 1
@@ -52,7 +52,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M30): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -113,7 +113,7 @@ class MysteryOfTheMissingHeart:
         symbol_df = self.get_hist_data(symbol, 1200).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None
+            return None, None, None
         # Generate the signals based on the strategy rules
         symbol_df['up_closes'] = symbol_df['close'] - symbol_df['open'] > 0
         symbol_df['down_closes'] = symbol_df['close'] - symbol_df['open'] < 0
@@ -128,15 +128,19 @@ class MysteryOfTheMissingHeart:
         symbol_df.dropna(inplace=True)
 
         #atr
-        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
+        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=16)
         atr = atrs[-1]
+
+        #sma
+        sma = talib.SMA(symbol_df['close'].values, timeperiod=4)
+        ma = sma[-1]
         
         #z_scores
         signal = symbol_df['Signal'].iloc[-1]
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal
+        return atr, signal, ma
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -163,8 +167,8 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal = self.define_strategy(symbol)
-            if atr is None or signal is None:
+            atr, signal, ma = self.define_strategy(symbol)
+            if atr is None or signal is None or ma is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
@@ -176,15 +180,15 @@ class MysteryOfTheMissingHeart:
             if symbol == "Step Index":
                 lotsize = 0.1
             if symbol == "Volatility 10 Index":
-                lotsize = 0.50
+                lotsize = 0.30
             if symbol == "Volatility 25 Index":
-                lotsize = 0.70
+                lotsize = 0.50
             
-            if signal==1:
+            if signal==1 and tick.bid > ma:
                 min_stop = round(tick.bid - (self.sl_factor * atr), 5)
                 target_profit = round(tick.bid + (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-            if signal==-1:
+            if signal==-1 and tick.bid < ma:
                 min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                 target_profit = round(tick.ask - (self.tp_factor * atr), 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
@@ -192,7 +196,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ["Step Index", "Volatility 10 Index", "Volatility 25 Index"]
+    symbols = [ "Volatility 10 Index"] #"Step Index", "Volatility 25 Index"
 
     last_action_timestamp = 0
     last_display_timestamp = 0
@@ -202,12 +206,12 @@ if __name__ == "__main__":
     while True:
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 900:
+        if (current_timestamp - last_action_timestamp) > 1800:
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
                 print("_______________________________________________________________________________________________________")
-                print("DERIV: MOMENTUM SCALPING STRATEGY")
+                print("DERIV LIVE ACCOUNT: MOMENTUM SCALPING STRATEGY")
                 print("_______________________________________________________________________________________________________")
                 print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 if current_account_info is not None:
@@ -221,10 +225,10 @@ if __name__ == "__main__":
             trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 900:
+        if (current_timestamp - last_display_timestamp) > 1800:
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
            
         # to avoid excessive cpu usage because loop running lightning fast
-        sleep(1)
+        sleep(5)

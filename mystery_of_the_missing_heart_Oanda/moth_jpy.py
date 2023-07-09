@@ -58,14 +58,18 @@ class MysteryOfTheMissingHeart:
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-        #get data and convert it into pandas dataframe
-        utc_from = datetime.now()
-        rates = mt5.copy_rates_from(symbol, timeframe, utc_from, n_bars)
-        data = pd.DataFrame(rates)
-        data['time'] = pd.to_datetime(data['time'], unit='s')
-        data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d')
-        data = data.set_index('time')
-        return data
+        try:
+            #get data and convert it into pandas dataframe
+            utc_from = datetime.now()
+            rates = mt5.copy_rates_from(symbol, timeframe, utc_from, n_bars)
+            data = pd.DataFrame(rates)
+            data['time'] = pd.to_datetime(data['time'], unit='s')
+            data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d')
+            data = data.set_index('time')
+            return data
+        except KeyError:
+            print(f"Error: Historical data for symbol '{symbol}' is not available.")
+            return pd.DataFrame()  # Return an empty DataFrame
     
     def get_dxy_data(self, symbol= "DX-Y.NYB"):
         data = yf.download(symbol, period="10d", interval="1h")
@@ -121,6 +125,9 @@ class MysteryOfTheMissingHeart:
         #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
         usdx = self.get_dxy_data()
         symbol_df = self.get_hist_data(symbol, 120).dropna()
+        if symbol_df.empty:
+            print(f"Error: Historical data for symbol '{symbol}' is not available.")
+            return None, None, None
         symbol_close = symbol_df["close"].rename(symbol)
         symbol_close.index = symbol_close.index.tz_localize('UTC')
         dfs = [usdx, symbol_close]
@@ -146,26 +153,23 @@ class MysteryOfTheMissingHeart:
         return price, atr, z_score
     
     def check_position(self):
-        """Checks the most recent position for a specific symbol. Returns True if LONG, False if SHORT."""
-        # Initialize the connection if there is not
-        mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
+        """Checks the most recent position for each symbol and prints the count of long and short positions."""
+        # Initialize the connection if it is not already initialized
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
 
         for symbol in self.symbols:
             positions = mt5.positions_get(symbol=symbol)
 
-            if positions == None or len(positions) == 0:
-                print("No positions found for symbol {}".format(symbol))
-                return None
-            
-            # Check the most recent position (last in the list)
-            #position = positions[-1]
-            for position in positions:
-                if position.type == mt5.ORDER_TYPE_BUY:
-                    print(f'{symbol}: Long position')
-                    return True  # It's a long position
-                elif position.type == mt5.ORDER_TYPE_SELL:
-                    print(f'{symbol}: Short position')
-                    return False  # It's a short position
+            if positions is None or len(positions) == 0:
+                print(f"No positions found for symbol {symbol}")
+            else:
+                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
+                print(f"Positions for symbol {symbol}:")
+                print(f"  Long positions: {long_positions}")
+                print(f"  Short positions: {short_positions}")
+        
+        print("--------------------------------------------------------------------------------------------------")
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -173,6 +177,9 @@ class MysteryOfTheMissingHeart:
 
         for symbol in self.symbols:
             price, atr, z_score = self.define_strategy(symbol)
+            if price is None or atr is None or z_score is None:
+                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
+                continue
             tick = mt5.symbol_info_tick(symbol)
             # check if we are invested
             #self.Invested = self.check_position(symbol)
@@ -195,7 +202,7 @@ if __name__ == "__main__":
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.05)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
 
     while True:
         # Launch the algorithm
@@ -208,9 +215,9 @@ if __name__ == "__main__":
                     # Account Info
                     if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                         current_account_info = mt5.account_info()
-                        print("------------------------------------------------------------------------------------------")
+                        print("__________________________________________________________________________________________________")
                         print("MOTH CORR JPY: OANDA LIVE ACCOUNT")
-                        print("------------------------------------------------------------------------------------------")
+                        print("__________________________________________________________________________________________________")
                         print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
                         if current_account_info is not None:
                             print(f"Balance: {current_account_info.balance} USD,\t"
@@ -224,8 +231,9 @@ if __name__ == "__main__":
                 last_action_timestamp = int(time.time())
 
         if (current_timestamp - last_display_timestamp) > 3600:
+            print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
 
         # to avoid excessive CPU usage because the loop is running too fast
-        time.sleep(5)
+        time.sleep(10)
