@@ -196,7 +196,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = [ "Volatility 10 Index"] #"Step Index", "Volatility 25 Index"
+    symbols = ["Volatility 10 Index"] #"Step Index", "Volatility 25 Index"
 
     last_action_timestamp = 0
     last_display_timestamp = 0
