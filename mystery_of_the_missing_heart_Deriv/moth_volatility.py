@@ -139,26 +139,26 @@ class MysteryOfTheMissingHeart:
         return atr, signal
     
     def check_position(self):
-        """Checks the most recent position for a specific symbol. Returns True if LONG, False if SHORT."""
-        # Initialize the connection if there is not
-        mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
+        """Checks the most recent position for each symbol and prints the results."""
+        # Initialize the connection if it is not already initialized
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
 
         for symbol in self.symbols:
             positions = mt5.positions_get(symbol=symbol)
 
-            if positions == None or len(positions) == 0:
-                print("No positions found for symbol {}".format(symbol))
-                return None
-            
-            # Check the most recent position (last in the list)
-            #position = positions[-1]
-            for position in positions:
-                if position.type == mt5.ORDER_TYPE_BUY:
-                    print(f'{symbol}: Long position')
-                    return True  # It's a long position
-                elif position.type == mt5.ORDER_TYPE_SELL:
-                    print(f'{symbol}: Short position')
-                    return False  # It's a short position
+            if positions is None or len(positions) == 0:
+                print(f"No positions found for symbol {symbol}")
+            else:
+                print(f"Positions for symbol {symbol}:")
+                for position in positions:
+                    if position.type == mt5.ORDER_TYPE_BUY:
+                        print("  Long position")
+                    elif position.type == mt5.ORDER_TYPE_SELL:
+                        print("  Short position")
+                    else:
+                        print("  Unknown position type")
+        
+        print("---------------------------------------------------------------------------")
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -224,6 +224,7 @@ if __name__ == "__main__":
             last_action_timestamp = int(time.time())
         
         if (current_timestamp - last_display_timestamp) > 900:
+            print("Open Positions:_______________________________________________________________________________")
             trader.check_position()
             last_display_timestamp = int(time.time())
            
