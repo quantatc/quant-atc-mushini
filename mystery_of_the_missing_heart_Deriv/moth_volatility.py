@@ -139,7 +139,7 @@ class MysteryOfTheMissingHeart:
         return atr, signal
     
     def check_position(self):
-        """Checks the most recent position for each symbol and prints the results."""
+        """Checks the most recent position for each symbol and prints the count of long and short positions."""
         # Initialize the connection if it is not already initialized
         mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
 
@@ -149,16 +149,14 @@ class MysteryOfTheMissingHeart:
             if positions is None or len(positions) == 0:
                 print(f"No positions found for symbol {symbol}")
             else:
+                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
                 print(f"Positions for symbol {symbol}:")
-                for position in positions:
-                    if position.type == mt5.ORDER_TYPE_BUY:
-                        print("  Long position")
-                    elif position.type == mt5.ORDER_TYPE_SELL:
-                        print("  Short position")
-                    else:
-                        print("  Unknown position type")
+                print(f"  Long positions: {long_positions}")
+                print(f"  Short positions: {short_positions}")
         
-        print("---------------------------------------------------------------------------")
+        print("--------------------------------------------------------------------------------------------------")
+
         
     def execute_trades(self):
         # Initialize the connection if there is not
@@ -208,9 +206,9 @@ if __name__ == "__main__":
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
-                print("------------------------------------------------------------------------------------------")
+                print("_______________________________________________________________________________________________________")
                 print("DERIV: MOMENTUM SCALPING STRATEGY")
-                print("------------------------------------------------------------------------------------------")
+                print("_______________________________________________________________________________________________________")
                 print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 if current_account_info is not None:
                     print(f"Balance: {current_account_info.balance} USD,\t"
@@ -224,7 +222,7 @@ if __name__ == "__main__":
             last_action_timestamp = int(time.time())
         
         if (current_timestamp - last_display_timestamp) > 900:
-            print("Open Positions:_______________________________________________________________________________")
+            print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
            
