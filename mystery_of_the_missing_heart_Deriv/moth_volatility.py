@@ -56,14 +56,18 @@ class MysteryOfTheMissingHeart:
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-        #get data and convert it into pandas dataframe
-        utc_from = datetime.now()
-        rates = mt5.copy_rates_from(symbol, timeframe, utc_from, n_bars)
-        data = pd.DataFrame(rates)
-        data['time'] = pd.to_datetime(data['time'], unit='s')
-        data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d')
-        data = data.set_index('time')
-        return data
+        try:
+            #get data and convert it into pandas dataframe
+            utc_from = datetime.now()
+            rates = mt5.copy_rates_from(symbol, timeframe, utc_from, n_bars)
+            data = pd.DataFrame(rates)
+            data['time'] = pd.to_datetime(data['time'], unit='s')
+            data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d')
+            data = data.set_index('time')
+            return data
+        except KeyError:
+            print(f"Error: Historical data for symbol '{symbol}' is not available.")
+            return pd.DataFrame()  # Return an empty DataFrame
 
     def place_order(self, symbol, order_type, sl_price, tp_price, lotsize):
         #point = mt5.symbol_info(self.symbol).point
@@ -107,6 +111,9 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
         symbol_df = self.get_hist_data(symbol, 1200).dropna()
+        if symbol_df.empty:
+            print(f"Error: Historical data for symbol '{symbol}' is not available.")
+            return None, None
         # Generate the signals based on the strategy rules
         symbol_df['up_closes'] = symbol_df['close'] - symbol_df['open'] > 0
         symbol_df['down_closes'] = symbol_df['close'] - symbol_df['open'] < 0
@@ -159,6 +166,9 @@ class MysteryOfTheMissingHeart:
 
         for symbol in self.symbols:
             atr, signal = self.define_strategy(symbol)
+            if atr is None or signal is None:
+                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
+                continue
             tick = mt5.symbol_info_tick(symbol)
             # check if we are invested
             #self.Invested = self.check_position(symbol)
