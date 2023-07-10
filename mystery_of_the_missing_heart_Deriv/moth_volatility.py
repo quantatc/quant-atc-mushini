@@ -52,7 +52,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M30): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     while True:
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 1800:
+        if (current_timestamp - last_action_timestamp) > 900:
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 1800:
+        if (current_timestamp - last_display_timestamp) > 900:
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
