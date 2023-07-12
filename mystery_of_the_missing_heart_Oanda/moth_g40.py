@@ -201,22 +201,23 @@ if __name__ == "__main__":
 
         if (current_timestamp - last_action_timestamp) > 3600:  # changed to 60 from 3600
             if current_datetime.weekday() < 5:  # Monday to Friday
-                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                    current_account_info = mt5.account_info()
-                    print("__________________________________________________________________________________________________")
-                    print("MOTH MOMENTUM STRATEGY: OANDA LIVE ACCOUNT")
-                    print("__________________________________________________________________________________________________")
-                    print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                    if current_account_info is not None:
-                        print(f"Balance: {current_account_info.balance} USD,\t"
-                                f"Equity: {current_account_info.equity} USD, \t"
-                                f"Profit: {current_account_info.profit} USD")
-                    else:
-                        print("Failed to retrieve account information.")
-                    print("-------------------------------------------------------------------------------------------")
-                # Look for trades
-                trader.execute_trades()
-                last_action_timestamp = int(time.time())
+                if not (20 <= current_datetime.hour < 23): 
+                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                        current_account_info = mt5.account_info()
+                        print("__________________________________________________________________________________________________")
+                        print("MOTH MOMENTUM STRATEGY: OANDA LIVE ACCOUNT")
+                        print("__________________________________________________________________________________________________")
+                        print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
+                        if current_account_info is not None:
+                            print(f"Balance: {current_account_info.balance} USD,\t"
+                                    f"Equity: {current_account_info.equity} USD, \t"
+                                    f"Profit: {current_account_info.profit} USD")
+                        else:
+                            print("Failed to retrieve account information.")
+                        print("-------------------------------------------------------------------------------------------")
+                    # Look for trades
+                    trader.execute_trades()
+                    last_action_timestamp = int(time.time())
 
         if (current_timestamp - last_display_timestamp) > 3600:
             print("Open Positions:---------------------------------------------------------------------------------")
