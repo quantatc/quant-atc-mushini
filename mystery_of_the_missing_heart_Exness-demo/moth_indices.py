@@ -95,7 +95,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 999999,
+            "magic": 473563,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -171,35 +171,36 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal = self.define_strategy(symbol)
-            if atr is None or signal is None:
+            atr, signal, hurst = self.define_strategy(symbol)
+            if atr is None or signal is None or hurst is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
-            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
+            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
             
-            if signal==1:
-                min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-          
-            if signal==-1:
-                min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            if self.hurst_lower <= hurst <= self.hurst_upper:
+                if signal==1:
+                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            
+                if signal==-1:
+                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
             
 
 if __name__ == "__main__":
 
-    symbols = ['DE30m']
+    symbols = ['USTECm', 'US30m']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.05)
 
     while True:
         # Launch the algorithm
