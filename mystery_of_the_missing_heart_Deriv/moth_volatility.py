@@ -23,7 +23,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1.5
-    tp_factor = 1.5
+    tp_factor = 2
     BCount = 1
     PullBack = 1
     hurst_upper = 0.6
@@ -202,7 +202,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ["Volatility 10 Index", "Step Index"] #, "Volatility 25 Index"
+    symbols = ["Volatility 10 Index"] #, "Volatility 25 Index", "Step Index
 
     last_action_timestamp = 0
     last_display_timestamp = 0
