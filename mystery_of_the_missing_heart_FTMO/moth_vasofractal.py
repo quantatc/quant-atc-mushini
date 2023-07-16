@@ -4,6 +4,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 from functools import reduce
+from vasof_indicator import Vasof
 import talib
 import time
 from time import sleep
@@ -14,19 +15,20 @@ import os
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id5"))
-mt_password = os.getenv("mt_password5")
-mt_server_name = os.getenv("mt_server_name5")
+mt_login_id = int(os.getenv("mt_login_id3"))
+mt_password = os.getenv("mt_password3")
+mt_server_name = os.getenv("mt_server_name3")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 3
+    sl_factor = 2
     tp_factor = 1
-    upper_threshold = 0.5
-    lower_threshold = -0.5
-    #exit_threshold = 0.01
+    quantile = 0.3
+    lower_fib_thres = 10
+    high_fib_thres = 95
+    threshold = 0.0032
 
     def __init__(self, symbols, lot_size):
         self.symbols = symbols
@@ -70,16 +72,6 @@ class MysteryOfTheMissingHeart:
         except KeyError:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return pd.DataFrame()  # Return an empty DataFrame
-    
-    def get_dxy_data(self, symbol= "DX-Y.NYB"):
-        data = yf.download(symbol, period="10d", interval="1h")
-        data.index.name = 'date'
-        usdx_yahoo = data.tail(120)
-        usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
-        usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
-        usdx_yahoo = usdx_yahoo[:-1]
-        usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
-        return usdx_yahoo
 
     def place_order(self, symbol, order_type, sl_price, tp_price):
         #point = mt5.symbol_info(self.symbol).point
@@ -102,7 +94,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 111311,
+            "magic": 271667,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -117,40 +109,84 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Order placed successfully: {result}')
         return True
     
+    def close_positions(self, position):
+        """ Function to close a specific position """
+        # Initialize the connection if there is not
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+
+        tick = mt5.symbol_info_tick(position.symbol)
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": position.volume,
+            "type": mt5.ORDER_TYPE_BUY if position.type == mt5.ORDER_TYPE_SELL else mt5.ORDER_TYPE_SELL,
+            "position": position.ticket,
+            "price": tick.ask if position.type == mt5.ORDER_TYPE_BUY else tick.bid,
+            "deviation": 20,
+            "magic": 444556,
+            "comment": "correlation algo order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        # Send a trading request
+        result = mt5.order_send(request)
+        if result is None:
+            print("Failed to close position.")
+        elif result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to close position: {result.comment}")
+        else:
+            print(f"Closed position: {position.symbol} ({position.volume} lots)")
+    
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
-        usdx = self.get_dxy_data()
-        symbol_df = self.get_hist_data(symbol, 120).dropna()
-        if symbol_df.empty:
+        df = self.get_hist_data(symbol, 2000).dropna()
+        if df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None
-        symbol_close = symbol_df["close"].rename(symbol)
-        symbol_close.index = symbol_close.index.tz_localize('UTC')
-        dfs = [usdx, symbol_close]
-        merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
-        merged_data.dropna(inplace=True)
+        
+        vasof_instance = Vasof(df)
+        vasof_instance.adder(3)
+        vasof_instance.fib_stoch(20, 4, 5)
+        my_data = vasof_instance.data
+        df = pd.DataFrame(my_data, columns = ["Date", "Open", "High", "Low", "Close", "std", "nstd", "fib_stoch"])
+        df.set_index("Date", inplace = True)
+        df.index = pd.to_datetime(df.index)
+        df = df.apply(pd.to_numeric)
+        df.dropna(inplace = True)
+        #fractal analysis params...........................................................
+        ema_lookback = 20
+        min_max_lookback = 14
+        #..................................................................................
+        df['ema_high'] = df.High.ewm(span=ema_lookback, adjust=False).mean() 
+        df['ema_low'] = df.Low.ewm(span=ema_lookback, adjust=False).mean() 
+        df['volatility_high'] =  df.High.rolling(ema_lookback).std()
+        df['volatility_low'] = df.Low.rolling(ema_lookback).std()
+        df['MAX'] = (df.High - df.ema_high).rolling(min_max_lookback).max()
+        df['MIN'] = (df.Low - df.ema_low).rolling(min_max_lookback).min()
+        df.dropna(inplace = True)
+        df['fractal'] = (df.MAX - df.MIN) / ((df.volatility_high + df.volatility_low)/2)
+        df = df.drop(columns = ["std", "nstd", 'ema_high', 'ema_low', 'volatility_high', 'volatility_low', 'MAX', 'MIN'])
 
         #price
-        price = symbol_df["close"].iloc[-1]
-
+        price = df["Close"].iloc[-1]
+        #fractal value
+        fractal = df['fractal'].iloc[-1]
+        #vasof value
+        vasof = df['fib_stoch'].iloc[-1]
         #atr
-        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=10)
-        atr = atrs[-1]
-        
-        #z_scores
-        spread = merged_data["usdx"] - merged_data[symbol]
-        rolling_mean = spread.rolling(window=20).mean()
-        rolling_std = spread.rolling(window=20).std()
-        z_scores = (spread - rolling_mean) / rolling_std
-        z_score = z_scores.iloc[-1]
+        true_range = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=50)
+        atr = true_range[-1]
+        #bolinger bands for trend
+        upperband, middleband, lowerband = talib.BBANDS(df.Close.values, timeperiod=self.period, matype=1)
+        df['trend'] = upperband - lowerband
+        trend = df.trend.values[-1]
 
         #logging plus debugging
-        #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-        return price, atr, z_score
+        #print(f"Price:   {price}, ATR:  {atr}, Fractal: {fractal}, Vasof: {vasof}, Trend: {trend}")
+        return price, atr, fractal, vasof, trend
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -159,7 +195,6 @@ class MysteryOfTheMissingHeart:
 
         for symbol in self.symbols:
             positions = mt5.positions_get(symbol=symbol)
-
             if positions is None or len(positions) == 0:
                 print(f"No positions found for symbol {symbol}")
             else:
@@ -170,34 +205,46 @@ class MysteryOfTheMissingHeart:
                 print(f"  Short positions: {short_positions}")
         
         print("--------------------------------------------------------------------------------------------------")
+    
+    def close_all_positions(self):
+        """ Function to close all open positions """
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+        positions = mt5.positions_get()
+        if positions is None or len(positions) == 0:
+            print("No open positions to close.")
+        else:
+            for position in positions:
+                self.close_positions(position)
         
     def execute_trades(self):
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
-
         for symbol in self.symbols:
-            price, atr, z_score = self.define_strategy(symbol)
-            if price is None or atr is None or z_score is None:
+            price, atr, fractal, vasof, trend = self.define_strategy(symbol)
+            if price is None or atr is None or vasof is None or fractal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
-            # check if we are invested
-            #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
-            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
+            if tick is None:
+                continue
+            #logging strategy values
+            logging.info(f"Price:   {price}, ATR:  {atr}, Fractal: {fractal}, Vasof: {vasof}, Trend: {trend}")
+            print(f"Price:   {price}, ATR:  {atr}, Fractal: {fractal}, Vasof: {vasof}, Trend: {trend}")
             
-            if z_score > self.upper_threshold:
-                min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                target_profit = round(tick.bid - (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-            elif z_score < self.lower_threshold:
-                min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                target_profit = round(tick.ask + (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-
+            if  trend > self.thresold and fractal >= 1.5 and fractal <= 3.5:
+                if vasof <= self.lower_fib_thres:
+                    min_stop = round(tick.ask - (self.sl_factor * atr), 5)
+                    target_profit = round(tick.ask + (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+                if vasof >= self.high_fib_thres:
+                    min_stop = round(tick.bid + (self.sl_factor * atr), 5)
+                    target_profit = round(tick.bid - (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                    
+                
 if __name__ == "__main__":
 
-    symbols = ['USDJPYm']
+    symbols = ['CADCHFm', 'CHFJPYm', 'EURCHFm', 'GBPNZDm', 'NZDCADm', 'NZDCHFm']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
@@ -209,14 +256,16 @@ if __name__ == "__main__":
         current_timestamp = int(time.time())
         current_datetime = datetime.now()
 
-        if (current_timestamp - last_action_timestamp) > 3600:  # changed to 60 from 3600
-            if current_datetime.weekday() < 5:  # Monday to Friday
+        if (current_timestamp - last_action_timestamp) > 3600: # changed to 60 from 3600
+            if current_datetime.weekday() == 4 and current_datetime.hour >= 22:  # Friday after 10 PM
+                trader.close_all_positions()
+            elif 0 <= current_datetime.weekday() <= 4:  # Monday to Friday
                 if not (23 <= current_datetime.hour <= 3):  # Not between 11 PM and 3 AM
                     # Account Info
                     if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                         current_account_info = mt5.account_info()
                         print("__________________________________________________________________________________________________")
-                        print("MOTH CORR JPY: EXNESS LIVE ACCOUNT")
+                        print("MOTH VASOF STRATEGY: DEMO ACCOUNT: ")
                         print("__________________________________________________________________________________________________")
                         print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
                         if current_account_info is not None:
@@ -236,4 +285,4 @@ if __name__ == "__main__":
             last_display_timestamp = int(time.time())
 
         # to avoid excessive CPU usage because the loop is running too fast
-        time.sleep(10)
+        time.sleep(15)

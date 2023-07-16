@@ -1,4 +1,5 @@
 import MetaTrader5 as mt5
+from hurst import compute_Hc
 import yfinance as yf
 from datetime import datetime
 import pandas as pd
@@ -11,6 +12,7 @@ from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
+ 
 
 load_dotenv()
 # Load environment variables
@@ -22,11 +24,12 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1.5
-    tp_factor = 2.5
+    sl_factor = 1
+    tp_factor = 2
     BCount = 1
     PullBack = 1
-    ExitBars = 1
+    hurst_upper = 0.6
+    hurst_lower = 0.4
 
     def __init__(self, symbols, lot_size):
         self.symbols = symbols
@@ -115,7 +118,7 @@ class MysteryOfTheMissingHeart:
         symbol_df = self.get_hist_data(symbol, 1200).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None
+            return None, None, None
         # Generate the signals based on the strategy rules
         symbol_df['up_closes'] = symbol_df['close'] - symbol_df['open'] > 0
         symbol_df['down_closes'] = symbol_df['close'] - symbol_df['open'] < 0
@@ -132,13 +135,17 @@ class MysteryOfTheMissingHeart:
         #atr
         atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
         atr = atrs[-1]
+
+        #hurst exponent
+        close_price = np.array(symbol_df['close'])
+        hurst = compute_Hc(close_price[-100:], kind='price')[0]
         
         #z_scores
         signal = symbol_df['Signal'].iloc[-1]
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal
+        return atr, signal, hurst
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -164,30 +171,33 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal = self.define_strategy(symbol)
-            if atr is None or signal is None:
+            atr, signal, hurst = self.define_strategy(symbol)
+            if atr is None or signal is None or hurst is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
+            if tick is None:
+                continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
-            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
+            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
             
-            if signal==1:
-                min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-          
-            if signal==-1:
-                min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            if self.hurst_lower <= hurst <= self.hurst_upper:
+                if signal==1:
+                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            
+                if signal==-1:
+                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
             
 
 if __name__ == "__main__":
 
-    symbols = ['DE30m']
+    symbols = ['USTECm', 'DE30m']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
