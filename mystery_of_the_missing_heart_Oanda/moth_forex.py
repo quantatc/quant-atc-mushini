@@ -151,6 +151,7 @@ class MysteryOfTheMissingHeart:
             #correlation
             correlation = merged_data['usdx'].rolling(window=20).corr((1/merged_data[symbol]))
             corr = correlation.iloc[-1]
+            return price, atr, z_score, corr
         else:
             #z_scores
             spread = merged_data["usdx"] - merged_data[symbol]
@@ -162,10 +163,10 @@ class MysteryOfTheMissingHeart:
             #correlation
             correlation = merged_data['usdx'].rolling(window=20).corr(merged_data[symbol])
             corr = correlation.iloc[-1]
-
+            return price, atr, z_score, corr
         #logging plus debugging
         #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-        return price, atr, z_score, corr
+        
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -229,7 +230,7 @@ if __name__ == "__main__":
     symbols = ['USDJPY', 'EURUSD', 'NZDUSD']
 
     last_action_timestamp = 0
-    last_display_timestamp = 0
+    last_display_timestamp = 0 
 
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
 
