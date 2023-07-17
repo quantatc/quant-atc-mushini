@@ -181,7 +181,7 @@ class MysteryOfTheMissingHeart:
         true_range = talib.ATR(df['High'].values, df['Low'].values, df['Close'].values, timeperiod=50)
         atr = true_range[-1]
         #bolinger bands for trend
-        upperband, middleband, lowerband = talib.BBANDS(df.Close.values, timeperiod=self.period, matype=1)
+        upperband, middleband, lowerband = talib.BBANDS(df.Close.values, timeperiod=20, matype=1)
         df['trend'] = upperband - lowerband
         trend = df.trend.values[-1]
 
