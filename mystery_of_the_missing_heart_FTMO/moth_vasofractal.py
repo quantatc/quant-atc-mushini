@@ -28,7 +28,7 @@ class MysteryOfTheMissingHeart:
     quantile = 0.3
     lower_fib_thres = 10
     high_fib_thres = 95
-    threshold = 0.0032
+    thresold = 0.0032
 
     def __init__(self, symbols, lot_size):
         self.symbols = symbols
@@ -146,7 +146,7 @@ class MysteryOfTheMissingHeart:
         df = self.get_hist_data(symbol, 2000).dropna()
         if df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None
+            return None, None, None, None, None
         
         vasof_instance = Vasof(df)
         vasof_instance.adder(3)
