@@ -68,6 +68,7 @@ class MysteryOfTheMissingHeart:
             data['time'] = pd.to_datetime(data['time'], unit='s')
             data['time'] = pd.to_datetime(data['time'], format='%Y-%m-%d')
             data = data.set_index('time')
+            data = data[['open', 'high', 'low', 'close']]
             return data
         except KeyError:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
