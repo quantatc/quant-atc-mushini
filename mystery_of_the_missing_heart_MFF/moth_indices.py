@@ -28,7 +28,7 @@ class MysteryOfTheMissingHeart:
     tp_factor = 2
     BCount = 1
     PullBack = 1
-    hurst_upper = 0.6
+    hurst_upper = 0.7
     hurst_lower = 0.4
 
     def __init__(self, symbols, lot_size):

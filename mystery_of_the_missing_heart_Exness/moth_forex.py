@@ -227,12 +227,12 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ['USDJPYm', 'EURUSDm', 'NZDUSDm']
+    symbols = ['USDJPYm', 'EURUSDm']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
 
     while True:
         # Launch the algorithm
