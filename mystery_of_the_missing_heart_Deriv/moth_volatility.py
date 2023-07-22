@@ -22,12 +22,13 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1.5
-    tp_factor = 2
+    sl_factor = 1
+    tp_factor = 1.5
     BCount = 1
     PullBack = 1
-    hurst_upper = 0.6
-    hurst_lower = 0.4
+    trend_threshold = 0.15
+    # hurst_upper = 0.6
+    # hurst_lower = 0.4
 
     def __init__(self, symbols):
         self.symbols = symbols
@@ -112,10 +113,10 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        symbol_df = self.get_hist_data(symbol, 1200).dropna()
+        symbol_df = self.get_hist_data(symbol, 15000).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None, None
+            return None, None, None
         # Generate the signals based on the strategy rules
         symbol_df['up_closes'] = symbol_df['close'] - symbol_df['open'] > 0
         symbol_df['down_closes'] = symbol_df['close'] - symbol_df['open'] < 0
@@ -134,19 +135,25 @@ class MysteryOfTheMissingHeart:
         atr = atrs[-1]
 
         #hurst exponent
-        close_price = np.array(symbol_df['close'])
-        hurst = compute_Hc(close_price[-100:], kind='price')[0]
+        # close_price = np.array(symbol_df['close'])
+        # hurst = compute_Hc(close_price[-100:], kind='price')[0]
+
+        #trend factor
+        upperband, _, lowerband = talib.BBANDS(symbol_df.close.values, timeperiod=20, matype=1)
+        symbol_df['trend'] = upperband - lowerband
+        symbol_df['trend_norm'] = (symbol_df['trend'] - symbol_df['trend'].min()) / (symbol_df['trend'].max() - symbol_df['trend'].min())
+        trend = symbol_df['trend_norm'].iloc[-1]
 
         #sma
-        sma = talib.SMA(symbol_df['close'].values, timeperiod=4)
-        ma = sma[-1]
+        # sma = talib.SMA(symbol_df['close'].values, timeperiod=4)
+        # ma = sma[-1]
         
-        #z_scores
+        #signal
         signal = symbol_df['Signal'].iloc[-1]
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, ma, hurst
+        return atr, signal, trend
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -173,15 +180,15 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal, ma, hurst = self.define_strategy(symbol)
-            if atr is None or signal is None or ma is None or hurst is None:
+            atr, signal, trend = self.define_strategy(symbol)
+            if atr is None or signal is None or trend is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
-            print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {round(hurst, 2)}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Trend: {trend}')
+            print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {round(trend, 3)}')
             
             if symbol == "Step Index":
                 lotsize = 0.1
@@ -189,20 +196,20 @@ class MysteryOfTheMissingHeart:
                 lotsize = 0.30
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
-            if self.hurst_lower <= hurst <= self.hurst_upper:
-                if signal==1 and tick.bid > ma:
-                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+            if trend > self.trend_threshold:
+                if signal==1:
+                    min_stop = round(tick.ask - (self.sl_factor * atr), 5)
+                    target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-                if signal==-1 and tick.bid < ma:
-                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                if signal==-1:
+                    min_stop = round(tick.bid + (self.sl_factor * atr), 5)
+                    target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
             
 
 if __name__ == "__main__":
 
-    symbols = ["Volatility 10 Index", "Step Index"] #, "Volatility 25 Index", 
+    symbols = ["Volatility 10 Index", "Volatility 25 Index"] #"Step Index"
 
     last_action_timestamp = 0
     last_display_timestamp = 0
