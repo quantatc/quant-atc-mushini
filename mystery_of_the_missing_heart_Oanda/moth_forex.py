@@ -11,6 +11,7 @@ from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
+import schedule
 
 load_dotenv()
 # Load environment variables
@@ -234,36 +235,32 @@ if __name__ == "__main__":
 
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
 
-    while True:
-        # Launch the algorithm
-        current_timestamp = int(time.time())
+    def execute_trades():
         current_datetime = datetime.now()
 
-        if (current_timestamp - last_action_timestamp) > 3600:  # changed to 60 from 3600
-            if current_datetime.weekday() < 5:  # Monday to Friday
-                if not (23 <= current_datetime.hour <= 3):  # Not between 11 PM and 3 AM
-                    # Account Info
-                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                        current_account_info = mt5.account_info()
-                        print("__________________________________________________________________________________________________")
-                        print("MOTH CORRELATION: OANDA LIVE ACCOUNT")
-                        print("__________________________________________________________________________________________________")
-                        print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                        if current_account_info is not None:
-                            print(f"Balance: {current_account_info.balance} USD,\t"
-                                  f"Equity: {current_account_info.equity} USD, \t"
-                                  f"Profit: {current_account_info.profit} USD")
-                        else:
-                            print("Failed to retrieve account information.")
-                        print("-------------------------------------------------------------------------------------------")
-                    # Look for trades
-                    trader.execute_trades()
-                last_action_timestamp = int(time.time())
+        if current_datetime.weekday() < 5:  # Monday to Friday
+            if 9 <= current_datetime.hour < 15:  # Check for hours 9 to 14 (inclusive)
+                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                    current_account_info = mt5.account_info()
+                    print("__________________________________________________________________________________________________")
+                    print("MOTH CORR FX: OANDA LIVE ACCOUNT")
+                    print("__________________________________________________________________________________________________")
+                    print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
+                    if current_account_info is not None:
+                        print(f"Balance: {current_account_info.balance} USD,\t"
+                                f"Equity: {current_account_info.equity} USD, \t"
+                                f"Profit: {current_account_info.profit} USD")
+                    else:
+                        print("Failed to retrieve account information.")
+                    print("-------------------------------------------------------------------------------------------")
+                # Look for trades
+                trader.execute_trades()
 
-        if (current_timestamp - last_display_timestamp) > 3600:
-            print("Open Positions:---------------------------------------------------------------------------------")
-            trader.check_position()
-            last_display_timestamp = int(time.time())
+                print("Open Positions:---------------------------------------------------------------------------------")
+                trader.check_position()
 
-        # to avoid excessive CPU usage because the loop is running too fast
-        time.sleep(10)
+    # Schedule the tasks
+    schedule.every().hour.at(":03").do(execute_trades)
+
+    while True:
+        schedule.run_pending()
