@@ -224,14 +224,13 @@ if __name__ == "__main__":
     last_display_timestamp = 0
 
     trader = MysteryOfTheMissingHeart(symbols)
+    # Calculate the time until the next bar opens
+    wait_time = trader.time_until_next_bar()
+    # Wait until the next bar opens
+    time.sleep(wait_time)
 
     while True:
         # Launch the algorithm
-        # Calculate the time until the next bar opens
-        wait_time = trader.time_until_next_bar()
-        # Wait until the next bar opens
-        time.sleep(wait_time)
-
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) > 900:
             # Account Info
@@ -256,3 +255,8 @@ if __name__ == "__main__":
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
+        
+        # Calculate the time until the next bar opens
+        wait_time = trader.time_until_next_bar()
+        # Wait until the next bar opens
+        time.sleep(wait_time)
