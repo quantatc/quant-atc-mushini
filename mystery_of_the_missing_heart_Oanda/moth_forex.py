@@ -228,7 +228,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ['USDJPY', 'EURUSD']
+    symbols = ['USDJPY.sml', 'EURUSD.sml']
 
     last_action_timestamp = 0
     last_display_timestamp = 0 
