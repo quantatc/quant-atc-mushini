@@ -244,4 +244,4 @@ if __name__ == "__main__":
             last_display_timestamp = int(time.time())
            
         # to avoid excessive cpu usage because loop running lightning fast
-        sleep(5)
+        #sleep(5)
