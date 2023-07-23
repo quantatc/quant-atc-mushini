@@ -28,7 +28,7 @@ class MysteryOfTheMissingHeart:
     sl_factor = 2.5
     tp_factor = 2.5
     z_threshold = 1
-    BCount = 1
+    BCount = 1 
     PullBack = 1
 
     def __init__(self, symbols, lot_size):
@@ -241,14 +241,11 @@ if __name__ == "__main__":
                     print("-------------------------------------------------------------------------------------------")
                 # Look for trades
                 trader.execute_trades()
-
-    def check_positions():
-        print("Open Positions:---------------------------------------------------------------------------------")
-        trader.check_position()
+                print("Open Positions:---------------------------------------------------------------------------------")
+                trader.check_position()
 
     # Schedule the tasks
     schedule.every().hour.at(":00").do(execute_trades)
-    schedule.every().hour.at(":00").do(check_positions)
 
     while True:
         schedule.run_pending()

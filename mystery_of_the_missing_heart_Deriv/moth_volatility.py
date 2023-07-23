@@ -1,13 +1,9 @@
 import MetaTrader5 as mt5
-from hurst import compute_Hc
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
-from functools import reduce
 import talib
 import time
-from time import sleep
-from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
@@ -205,7 +201,20 @@ class MysteryOfTheMissingHeart:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-            
+    
+    # Function to calculate the time until the next bar opens (15-minute interval)
+    def time_until_next_bar(self):
+        current_time = datetime.now()
+        next_bar_time = current_time.replace(second=0, microsecond=0)
+
+        while next_bar_time.minute % 15 != 0:
+            next_bar_time += timedelta(minutes=1)
+
+        if current_time >= next_bar_time:
+            next_bar_time += timedelta(minutes=15)
+
+        time_difference = next_bar_time - current_time
+        return time_difference.total_seconds()        
 
 if __name__ == "__main__":
 
@@ -218,6 +227,11 @@ if __name__ == "__main__":
 
     while True:
         # Launch the algorithm
+        # Calculate the time until the next bar opens
+        wait_time = trader.time_until_next_bar()
+        # Wait until the next bar opens
+        time.sleep(wait_time)
+
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) > 900:
             # Account Info
@@ -242,6 +256,3 @@ if __name__ == "__main__":
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
-           
-        # to avoid excessive cpu usage because loop running lightning fast
-        #sleep(5)
