@@ -213,15 +213,10 @@ if __name__ == "__main__":
 
     while True:
         current_time = datetime.now()
-        next_run_time = (current_time + timedelta(minutes=15)).replace(second=0, microsecond=0)
-        time_to_sleep = (next_run_time - current_time).total_seconds()
-
-        # Sleep until the next 15-minute interval
-        time.sleep(time_to_sleep)
 
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) > 900:
+        if (current_timestamp - last_action_timestamp) == 900:
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
@@ -240,7 +235,7 @@ if __name__ == "__main__":
             trader.execute_trades()
             last_action_timestamp = int(time.time())
         
-        if (current_timestamp - last_display_timestamp) > 900:
+            #if (current_timestamp - last_display_timestamp) > 900:
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
