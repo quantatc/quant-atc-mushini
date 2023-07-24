@@ -239,7 +239,7 @@ if __name__ == "__main__":
         current_datetime = datetime.now()
 
         if current_datetime.weekday() < 5:  # Monday to Friday
-            if 9 <= current_datetime.hour < 15:  # Check for hours 9 to 14 (inclusive)
+            if not (23 <= current_datetime.hour <= 3):  # Check for hours 23 to 3am
                 if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                     current_account_info = mt5.account_info()
                     print("__________________________________________________________________________________________________")
