@@ -201,20 +201,6 @@ class MysteryOfTheMissingHeart:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-    
-    # Function to calculate the time until the next bar opens (15-minute interval)
-    def time_until_next_bar(self):
-        current_time = datetime.now()
-        next_bar_time = current_time.replace(second=0, microsecond=0)
-
-        while next_bar_time.minute % 15 != 0:
-            next_bar_time += timedelta(minutes=1)
-
-        if current_time >= next_bar_time:
-            next_bar_time += timedelta(minutes=15)
-
-        time_difference = next_bar_time - current_time
-        return time_difference.total_seconds()        
 
 if __name__ == "__main__":
 
@@ -224,12 +210,15 @@ if __name__ == "__main__":
     last_display_timestamp = 0
 
     trader = MysteryOfTheMissingHeart(symbols)
-    # Calculate the time until the next bar opens
-    wait_time = trader.time_until_next_bar()
-    # Wait until the next bar opens
-    time.sleep(wait_time)
 
     while True:
+        current_time = datetime.now()
+        next_run_time = (current_time + timedelta(minutes=15)).replace(second=0, microsecond=0)
+        time_to_sleep = (next_run_time - current_time).total_seconds()
+
+        # Sleep until the next 15-minute interval
+        time.sleep(time_to_sleep)
+
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) > 900:
@@ -255,8 +244,3 @@ if __name__ == "__main__":
             print("Open Positions:---------------------------------------------------------------------------------")
             trader.check_position()
             last_display_timestamp = int(time.time())
-        
-        # Calculate the time until the next bar opens
-        wait_time = trader.time_until_next_bar()
-        # Wait until the next bar opens
-        time.sleep(wait_time)
