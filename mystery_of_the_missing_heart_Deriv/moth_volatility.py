@@ -7,6 +7,7 @@ import time
 import logging
 from dotenv import load_dotenv
 import os
+import schedule
 
 load_dotenv()
 # Load environment variables
@@ -202,40 +203,49 @@ class MysteryOfTheMissingHeart:
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
 
-if __name__ == "__main__":
 
+def job():
     symbols = ["Volatility 10 Index", "Volatility 25 Index"] #"Step Index"
-
     last_action_timestamp = 0
     last_display_timestamp = 0
-
     trader = MysteryOfTheMissingHeart(symbols)
+    current_time = datetime.now()
+    # Launch the algorithm
+    current_timestamp = int(time.time())
+    if (current_timestamp - last_action_timestamp) == 900:
+        # Account Info
+        if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+            current_account_info = mt5.account_info()
+            print("_______________________________________________________________________________________________________")
+            print("DERIV LIVE ACCOUNT: MOMENTUM SCALPING STRATEGY")
+            print("_______________________________________________________________________________________________________")
+            print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            if current_account_info is not None:
+                print(f"Balance: {current_account_info.balance} USD,\t"
+                      f"Equity: {current_account_info.equity} USD, \t"
+                      f"Profit: {current_account_info.profit} USD")
+            else:
+                print("Failed to retrieve account information.")
+            print("-------------------------------------------------------------------------------------------")
+        # Look for trades
+        trader.execute_trades()
+        last_action_timestamp = int(time.time())
+    
+        #if (current_timestamp - last_display_timestamp) > 900:
+        print("Open Positions:---------------------------------------------------------------------------------")
+        trader.check_position()
+        last_display_timestamp = int(time.time())
 
+def sleep_till_next_interval(interval_minutes):
+    """Sleeps until the next time interval."""
+    now = datetime.datetime.now()
+    minutes = (now.minute // interval_minutes + 1) * interval_minutes
+    next_time = datetime.datetime(now.year, now.month, now.day, now.hour, minutes)
+    time_diff = (next_time - now).total_seconds()
+    time.sleep(time_diff)
+
+if __name__ == "__main__":
     while True:
-        current_time = datetime.now()
+        job()
+        sleep_till_next_interval(15)
 
-        # Launch the algorithm
-        current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) == 900:
-            # Account Info
-            if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                current_account_info = mt5.account_info()
-                print("_______________________________________________________________________________________________________")
-                print("DERIV LIVE ACCOUNT: MOMENTUM SCALPING STRATEGY")
-                print("_______________________________________________________________________________________________________")
-                print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                if current_account_info is not None:
-                    print(f"Balance: {current_account_info.balance} USD,\t"
-                          f"Equity: {current_account_info.equity} USD, \t"
-                          f"Profit: {current_account_info.profit} USD")
-                else:
-                    print("Failed to retrieve account information.")
-                print("-------------------------------------------------------------------------------------------")
-            # Look for trades
-            trader.execute_trades()
-            last_action_timestamp = int(time.time())
-        
-            #if (current_timestamp - last_display_timestamp) > 900:
-            print("Open Positions:---------------------------------------------------------------------------------")
-            trader.check_position()
-            last_display_timestamp = int(time.time())
