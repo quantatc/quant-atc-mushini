@@ -238,9 +238,9 @@ def job():
 
 def sleep_till_next_interval(interval_minutes):
     """Sleeps until the next time interval."""
-    now = datetime.datetime.now()
+    now = datetime.now()
     minutes = (now.minute // interval_minutes + 1) * interval_minutes
-    next_time = datetime.datetime(now.year, now.month, now.day, now.hour, minutes)
+    next_time = datetime(now.year, now.month, now.day, now.hour, minutes)
     time_diff = (next_time - now).total_seconds()
     time.sleep(time_diff)
 
