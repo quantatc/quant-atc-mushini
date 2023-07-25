@@ -182,6 +182,7 @@ class MysteryOfTheMissingHeart:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
+            if tick is None: continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Trend: {trend}')
