@@ -87,6 +87,8 @@ class MysteryOfTheMissingHeart:
         deviation = 20
         tick = mt5.symbol_info_tick(symbol)
         symbol_info = mt5.symbol_info(symbol)
+        if tick is None:
+            return False
         
         if order_type == mt5.ORDER_TYPE_BUY:
             price = tick.ask
