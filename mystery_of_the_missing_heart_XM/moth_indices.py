@@ -12,8 +12,6 @@ from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
-import schedule
- 
 
 load_dotenv()
 # Load environment variables
@@ -219,7 +217,7 @@ if __name__ == "__main__":
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols, 0.1)
     while True:
-        current_time = datetime.now()
+        current_time = datetime.now() 
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) >= 900:
@@ -237,17 +235,16 @@ if __name__ == "__main__":
                 else:
                     print("Failed to retrieve account information.")
                 print("-------------------------------------------------------------------------------------------")
-            # Look for trades
-            start_time = time.time()
-            trader.execute_trades()
-            execution_time = time.time() - start_time
-            last_action_timestamp = int(time.time()) - execution_time
-
-            #if (current_timestamp - last_display_timestamp) > 900:
-            print("Open Positions:---------------------------------------------------------------------------------")
-            start_time = time.time()
-            trader.check_position()
-            execution_time = time.time() - start_time
-            last_display_timestamp = int(time.time()) - execution_time
+                # Look for trades
+                start_time = time.time()
+                trader.execute_trades()
+                #execution_time = time.time() - start_time
+                #last_action_timestamp = int(time.time()) - execution_time
+                #if (current_timestamp - last_display_timestamp) > 900:
+                print("Open Positions:---------------------------------------------------------------------------------")
+                #start_time = time.time()
+                trader.check_position()
+                execution_time = time.time() - start_time
+                last_action_timestamp = int(time.time()) - execution_time
 
 
