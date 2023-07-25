@@ -194,11 +194,9 @@ class MysteryOfTheMissingHeart:
 
         for symbol in self.symbols:
             price, atr, z_score, corr = self.define_strategy(symbol)
-            if price is None or atr is None or z_score is None or corr is None:
-                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
-                continue
             tick = mt5.symbol_info_tick(symbol)
-            if tick is None:
+            if price is None or atr is None or z_score is None or corr is None or tick is None:
+                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
