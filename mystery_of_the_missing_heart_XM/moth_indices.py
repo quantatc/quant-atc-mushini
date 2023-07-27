@@ -118,12 +118,13 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
         symbol_df = self.get_hist_data(symbol, 1200).dropna()
-        nas100 = self.get_hist_data(self.symbols[0], 1200).dropna()['close']
-        ger30 = self.get_hist_data(self.symbols[1], 1200).dropna()['close']
+        nas100 = self.get_hist_data(self.symbols[0], 1200).dropna()
+        ger30 = self.get_hist_data(self.symbols[1], 1200).dropna()
         if symbol_df.empty or nas100.empty or ger30.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None
-        
+        nas100 = nas100['close']
+        ger30 = ger30['close']
         #correlation analysis
         dfs = [nas100.rename('nas100'), ger30.rename('ger30')]
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
@@ -205,18 +206,18 @@ class MysteryOfTheMissingHeart:
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
 
-            if symbol == self.symbols[1]:
-                if z_score < -self.z_threshold and signal==1:
-                    min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask + (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-                if z_score > self.z_threshold and signal==-1:
-                    min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid - (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            # if symbol == self.symbols[1]:
+            #     if z_score < -self.z_threshold and signal==1:
+            #         min_stop = round(tick.ask - (self.sl_factor * atr), 5)
+            #         target_profit = round(tick.ask + (self.tp_factor * atr), 5)
+            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            #     if z_score > self.z_threshold and signal==-1:
+            #         min_stop = round(tick.bid + (self.sl_factor * atr), 5)
+            #         target_profit = round(tick.bid - (self.tp_factor * atr), 5)
+            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
-    symbols = [ 'GER40Cash'] #'US100Cash',
+    symbols = ['US100Cash', 'GER40Cash'] #
     last_action_timestamp = 0
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols, 0.1)
