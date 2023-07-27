@@ -251,6 +251,6 @@ if __name__ == "__main__":
                 #start_time = time.time()
                 trader.check_position()
                 execution_time = time.time() - start_time
-                last_action_timestamp = int(time.time()) - execution_time
+                last_action_timestamp = int(time.time()) - (execution_time + 1)
 
 
