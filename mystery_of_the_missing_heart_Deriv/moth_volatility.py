@@ -218,6 +218,7 @@ if __name__ == "__main__":
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) >= 900:
+            start_time = time.time()
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
@@ -233,7 +234,6 @@ if __name__ == "__main__":
                     print("Failed to retrieve account information.")
                 print("-------------------------------------------------------------------------------------------")
                 # Look for trades
-                start_time = time.time()
                 trader.execute_trades()
                 #execution_time = time.time() - start_time
                 #last_action_timestamp = int(time.time()) - execution_time

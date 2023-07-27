@@ -236,6 +236,7 @@ if __name__ == "__main__":
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) >= 3600:
+            start_time = time.time()
             if not (23 <= current_time.hour <= 3):
                 # Account Info
                 if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
@@ -252,7 +253,6 @@ if __name__ == "__main__":
                         print("Failed to retrieve account information.")
                     print("-------------------------------------------------------------------------------------------")
                     # Look for trades
-                    start_time = time.time()
                     trader.execute_trades()
                     #execution_time = time.time() - start_time
                     #last_action_timestamp = int(time.time()) - execution_time
