@@ -183,21 +183,21 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
             print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
             
-            if self.hurst_lower <= hurst <= self.hurst_upper:
-                if signal==1:
-                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            # if self.hurst_lower <= hurst <= self.hurst_upper:
+            #     if signal==1:
+            #         min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+            #         target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
             
-                if signal==-1:
-                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            #     if signal==-1:
+            #         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+            #         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
             
 
 if __name__ == "__main__":
 
-    symbols = ['US100', 'GER30']
+    symbols = ['US100.sml', 'GER30.sml']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
@@ -205,34 +205,33 @@ if __name__ == "__main__":
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
 
     while True:
+        current_time = datetime.now() 
         # Launch the algorithm
         current_timestamp = int(time.time())
-        current_datetime = datetime.now()
-
-        if (current_timestamp - last_action_timestamp) > 3600:  # changed to 60 from 3600
-            if current_datetime.weekday() < 5:  # Monday to Friday
-                if not (20 <= current_datetime.hour < 23): 
-                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                        current_account_info = mt5.account_info()
-                        print("__________________________________________________________________________________________________")
-                        print("MOTH MOMENTUM STRATEGY: OANDA LIVE ACCOUNT")
-                        print("__________________________________________________________________________________________________")
-                        print(f"Date: {current_datetime.strftime('%Y-%m-%d %H:%M:%S')}")
-                        if current_account_info is not None:
-                            print(f"Balance: {current_account_info.balance} USD,\t"
-                                    f"Equity: {current_account_info.equity} USD, \t"
-                                    f"Profit: {current_account_info.profit} USD")
-                        else:
-                            print("Failed to retrieve account information.")
-                        print("-------------------------------------------------------------------------------------------")
+        if (current_timestamp - last_action_timestamp) >= 300:
+            start_time = time.time()
+            if not (23 <= current_time.hour <= 3):
+                # Account Info
+                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                    current_account_info = mt5.account_info()
+                    print("_______________________________________________________________________________________________________")
+                    print("OANDA LIVE ACCOUNT: MOTH CORRELATION STRATEGY")
+                    print("_______________________________________________________________________________________________________")
+                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    if current_account_info is not None:
+                        print(f"Balance: {current_account_info.balance} USD,\t"
+                            f"Equity: {current_account_info.equity} USD, \t"
+                            f"Profit: {current_account_info.profit} USD")
+                    else:
+                        print("Failed to retrieve account information.")
+                    print("-------------------------------------------------------------------------------------------")
                     # Look for trades
                     trader.execute_trades()
-                    last_action_timestamp = int(time.time())
-
-        if (current_timestamp - last_display_timestamp) > 3600:
-            print("Open Positions:---------------------------------------------------------------------------------")
-            trader.check_position()
-            last_display_timestamp = int(time.time())
-
-        # to avoid excessive CPU usage because the loop is running too fast
-        time.sleep(10)
+                    #execution_time = time.time() - start_time
+                    #last_action_timestamp = int(time.time()) - execution_time
+                    #if (current_timestamp - last_display_timestamp) > 900:
+                    print("Open Positions:---------------------------------------------------------------------------------")
+                    #start_time = time.time()
+                    trader.check_position()
+                    execution_time = time.time() - start_time
+                    last_action_timestamp = int(time.time()) - execution_time
