@@ -217,22 +217,22 @@ class MysteryOfTheMissingHeart:
                         min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                         target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-            else:
-                if -0.8 < corr < 0.8:
-                    if z_score > self.upper_threshold:
-                        min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                        target_profit = round(tick.bid - (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                    elif z_score < self.lower_threshold:
-                        min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                        target_profit = round(tick.ask + (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            # else:
+            #     if -0.8 < corr < 0.8:
+            #         if z_score > self.upper_threshold:
+            #             min_stop = round(tick.bid + (self.sl_factor * atr), 5)
+            #             target_profit = round(tick.bid - (self.tp_factor * atr), 5)
+            #             self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+            #         elif z_score < self.lower_threshold:
+            #             min_stop = round(tick.ask - (self.sl_factor * atr), 5)
+            #             target_profit = round(tick.ask + (self.tp_factor * atr), 5)
+            #             self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
     symbols = ['USDJPY', 'EURUSD'] 
     last_action_timestamp = 0 
     last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.1)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.2)
     while True:
         current_time = datetime.now() 
         # Launch the algorithm
