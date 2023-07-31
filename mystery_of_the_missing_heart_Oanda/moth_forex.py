@@ -131,7 +131,7 @@ class MysteryOfTheMissingHeart:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None, None
         symbol_close = symbol_df["close"].rename(symbol)
-        symbol_close.index = symbol_close.index.tz_localize('UTC')
+        symbol_close.index = symbol_close.index.tz_convert('UTC')
         dfs = [usdx, symbol_close]
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
         merged_data.dropna(inplace=True)
