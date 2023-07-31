@@ -77,7 +77,10 @@ class MysteryOfTheMissingHeart:
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
         usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
         usdx_yahoo = usdx_yahoo[:-1]
-        usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
+        try:
+            usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
+        except TypeError:
+            usdx_yahoo.index = usdx_yahoo.index.tz_convert('UTC')
         return usdx_yahoo
 
     def place_order(self, symbol, order_type, sl_price, tp_price):
@@ -131,7 +134,10 @@ class MysteryOfTheMissingHeart:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None, None
         symbol_close = symbol_df["close"].rename(symbol)
-        symbol_close.index = symbol_close.index.tz_convert('UTC')
+        try:
+            symbol_close.index = symbol_close.index.tz_convert('UTC')
+        except TypeError:
+            symbol_close.index = symbol_close.index.tz_localize('UTC')
         dfs = [usdx, symbol_close]
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
         merged_data.dropna(inplace=True)
