@@ -18,8 +18,8 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.5
+    sl_factor = 1.5
+    tp_factor = 1
     BCount = 1
     PullBack = 1
     trend_threshold = 0.15
@@ -51,7 +51,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -113,7 +113,7 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        symbol_df = self.get_hist_data(symbol, 15000).dropna()
+        symbol_df = self.get_hist_data(symbol, 5000).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None
@@ -217,7 +217,7 @@ if __name__ == "__main__":
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 900:
+        if (current_timestamp - last_action_timestamp) >= 3600:
             start_time = time.time()
             # Account Info
             if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
