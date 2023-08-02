@@ -149,7 +149,7 @@ class MysteryOfTheMissingHeart:
             #correlation
             correlation = merged_data['usdx'].rolling(window=20).corr((1/merged_data[symbol]))
             corr = correlation.iloc[-1]
-            print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
+            #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
             return price, atr, z_score, corr 
         else:
             #z_scores
@@ -163,7 +163,7 @@ class MysteryOfTheMissingHeart:
             correlation = merged_data['usdx'].rolling(window=20).corr(merged_data[symbol])
             corr = correlation.iloc[-1]
             #logging plus debugging
-            print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
+            #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
             return price, atr, z_score, corr
     
     def check_position(self):
