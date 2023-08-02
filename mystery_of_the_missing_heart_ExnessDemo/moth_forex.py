@@ -13,9 +13,9 @@ import os
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id2"))
-mt_password = os.getenv("mt_password2")
-mt_server_name = os.getenv("mt_server_name2")
+mt_login_id = int(os.getenv("mt_login_id5"))
+mt_password = os.getenv("mt_password5")
+mt_server_name = os.getenv("mt_server_name5")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
@@ -36,7 +36,7 @@ class MysteryOfTheMissingHeart:
             print("initialize() failed, error code =",mt5.last_error())
             quit()
 
-        self.usdx_symbols = self.symbols + ['AUDUSD.sml', 'GBPUSD.sml', 'NZDUSD', 'USDCAD']
+        self.usdx_symbols = self.symbols + ['AUDUSDm', 'GBPUSDm', 'NZDUSDm', 'USDCADm']
         for symbol in self.usdx_symbols:
             if self.check_symbol(symbol):
                 print(f"Symbol {symbol} is in the Market Watch.")
@@ -95,7 +95,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 111311,
+            "magic": 255552,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -246,7 +246,7 @@ class MysteryOfTheMissingHeart:
 
 
 if __name__ == "__main__":
-    symbols = ['USDJPY.sml', 'USDSEK', 'USDCHF', 'EURUSD.sml']
+    symbols = ['USDJPYm', 'USDSEKm', 'USDCHFm', 'EURUSDm']
     last_action_timestamp = 0
     last_display_timestamp = 0 
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
@@ -262,13 +262,13 @@ if __name__ == "__main__":
                 if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                     current_account_info = mt5.account_info()
                     print("_______________________________________________________________________________________________________")
-                    print("MOTH CORRELATION: OANDA LIVE ACCOUNT")
+                    print("MOTH CORRELATION: EXNESS LIVE ACCOUNT")
                     print("_______________________________________________________________________________________________________")
                     print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                     if current_account_info is not None:
-                        print(f"Balance: {current_account_info.balance} USD,\t"
-                            f"Equity: {current_account_info.equity} USD, \t"
-                            f"Profit: {current_account_info.profit} USD")
+                        print(f"Balance: {current_account_info.balance} ZAR,\t"
+                            f"Equity: {current_account_info.equity} ZAR, \t"
+                            f"Profit: {current_account_info.profit} ZAR")
                     else:
                         print("Failed to retrieve account information.")
                     print("-------------------------------------------------------------------------------------------")
