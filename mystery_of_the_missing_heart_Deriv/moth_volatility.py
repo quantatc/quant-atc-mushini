@@ -7,6 +7,7 @@ import time
 import logging
 from dotenv import load_dotenv
 import os
+from hurst import compute_Hc
 
 load_dotenv()
 # Load environment variables
@@ -18,8 +19,8 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1.5
-    tp_factor = 1
+    sl_factor = 1
+    tp_factor = 1.75
     BCount = 1
     PullBack = 1
     trend_threshold = 0.15
@@ -135,14 +136,14 @@ class MysteryOfTheMissingHeart:
         atr = atrs[-1]
 
         #hurst exponent
-        # close_price = np.array(symbol_df['close'])
-        # hurst = compute_Hc(close_price[-100:], kind='price')[0]
+        close_price = np.array(symbol_df['close'])
+        hurst = compute_Hc(close_price[-100:], kind='price')[0]
 
         #trend factor
-        upperband, _, lowerband = talib.BBANDS(symbol_df.close.values, timeperiod=20, matype=1)
-        symbol_df['trend'] = upperband - lowerband
-        symbol_df['trend_norm'] = (symbol_df['trend'] - symbol_df['trend'].min()) / (symbol_df['trend'].max() - symbol_df['trend'].min())
-        trend = symbol_df['trend_norm'].iloc[-1]
+        # upperband, _, lowerband = talib.BBANDS(symbol_df.close.values, timeperiod=20, matype=1)
+        # symbol_df['trend'] = upperband - lowerband
+        # symbol_df['trend_norm'] = (symbol_df['trend'] - symbol_df['trend'].min()) / (symbol_df['trend'].max() - symbol_df['trend'].min())
+        # trend = symbol_df['trend_norm'].iloc[-1]
 
         #sma
         # sma = talib.SMA(symbol_df['close'].values, timeperiod=4)
@@ -153,7 +154,7 @@ class MysteryOfTheMissingHeart:
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, trend
+        return atr, signal, round(hurst, 3)
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -180,16 +181,16 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal, trend = self.define_strategy(symbol)
-            if atr is None or signal is None or trend is None:
+            atr, signal, hurst = self.define_strategy(symbol)
+            if atr is None or signal is None or hurst is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
             if tick is None: continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Trend: {trend}')
-            print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {round(trend, 3)}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
+            print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
             
             if symbol == "Step Index":
                 lotsize = 0.1
@@ -197,7 +198,7 @@ class MysteryOfTheMissingHeart:
                 lotsize = 0.30
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
-            if trend > self.trend_threshold:
+            if hurst < 0.6:
                 if signal==1:
                     min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                     target_profit = round(tick.ask + (self.tp_factor * atr), 5)
