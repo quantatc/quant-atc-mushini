@@ -198,11 +198,11 @@ class MysteryOfTheMissingHeart:
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
             if trend > self.trend_threshold:
-                if signal==-1:
+                if signal==1:
                     min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                     target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-                if signal==1:
+                if signal==-1:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
