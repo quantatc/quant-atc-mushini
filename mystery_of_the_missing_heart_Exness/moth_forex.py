@@ -119,7 +119,9 @@ class MysteryOfTheMissingHeart:
         dfs =[]
         for s in self.usdx_symbols:
             df = self.get_hist_data(s, 300).dropna()
-            if not df.empty:
+            if df.empty:
+                return None, None, None, None
+            else:
                 close = df["close"].rename(s)
                 dfs.append(close)
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
