@@ -182,7 +182,7 @@ class MysteryOfTheMissingHeart:
             if hurst < 0.7:
                 if signal==1:
                     min_stop = round(tick.ask - (self.sl_factor * atr), 1)
-                    target_profit = round(ask.bid + (self.tp_factor * atr), 1)
+                    target_profit = round(tick.ask + (self.tp_factor * atr), 1)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
                 if signal==-1:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 1)
