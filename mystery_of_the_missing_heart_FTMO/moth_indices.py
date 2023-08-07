@@ -192,7 +192,7 @@ class MysteryOfTheMissingHeart:
 
 if __name__ == "__main__":
 
-    symbols = ['US30.cash', 'NAS100.cash']
+    symbols = ['US30.cash', 'US100.cash']
 
     last_action_timestamp = 0
     last_display_timestamp = 0
