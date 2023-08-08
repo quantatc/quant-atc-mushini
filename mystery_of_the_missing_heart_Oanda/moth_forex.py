@@ -225,15 +225,16 @@ class MysteryOfTheMissingHeart:
                         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
             
             if symbol == self.symbols[1]:
-                if -0.8 < corr < 0.8:
-                    if z_score > self.upper_threshold:
-                        min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                        target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                    elif z_score < self.lower_threshold:
-                        min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                        target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+                print(f'{symbol} is sh**ty currency pair')
+                # if -0.8 < corr < 0.8:
+                #     if z_score > self.upper_threshold:
+                #         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                #         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                #     elif z_score < self.lower_threshold:
+                #         min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                #         target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+                #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
             
             if symbol == self.symbols[2]:
                 if -0.8 < corr < 0.8:
