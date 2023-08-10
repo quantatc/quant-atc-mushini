@@ -22,7 +22,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     sl_factor = 2.5
-    tp_factor = 2
+    tp_factor = 1.5
     upper_threshold = 0.5
     lower_threshold = -0.5
 
@@ -36,7 +36,7 @@ class MysteryOfTheMissingHeart:
             print("initialize() failed, error code =",mt5.last_error())
             quit()
 
-        self.usdx_symbols = self.symbols + ['AUDUSD.sml', 'GBPUSD.sml', 'NZDUSD', 'USDCAD']
+        self.usdx_symbols = self.symbols + ['AUDUSD.sml', 'GBPUSD.sml', 'NZDUSD', 'USDCAD', 'EURUSD.sml', 'USDSEK']
         for symbol in self.usdx_symbols:
             if self.check_symbol(symbol):
                 print(f"Symbol {symbol} is in the Market Watch.")
@@ -140,33 +140,23 @@ class MysteryOfTheMissingHeart:
         atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=10)
         atr = atrs[-1]
         
-        if symbol not in self.symbols[:3]:
-            #z_scores
-            spread = merged_data["usdx"] - (1/ merged_data[symbol])
-            rolling_mean = spread.rolling(window=20).mean()
-            rolling_std = spread.rolling(window=20).std()
-            z_scores = (spread - rolling_mean) / rolling_std
-            z_score = z_scores.iloc[-1]
+        #trend
+        trendmode = talib.HT_TRENDMODE(symbol_df['close'].values)
+        trend = trendmode[-1]
+    
+        #z_scores
+        spread = merged_data["usdx"] - merged_data[symbol]
+        rolling_mean = spread.rolling(window=20).mean()
+        rolling_std = spread.rolling(window=20).std()
+        z_scores = (spread - rolling_mean) / rolling_std
+        z_score = z_scores.iloc[-1]
 
-            #correlation
-            correlation = merged_data['usdx'].rolling(window=20).corr((1/merged_data[symbol]))
-            corr = correlation.iloc[-1]
-            #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-            return price, atr, z_score, corr 
-        else:
-            #z_scores
-            spread = merged_data["usdx"] - merged_data[symbol]
-            rolling_mean = spread.rolling(window=20).mean()
-            rolling_std = spread.rolling(window=20).std()
-            z_scores = (spread - rolling_mean) / rolling_std
-            z_score = z_scores.iloc[-1]
-
-            #correlation
-            correlation = merged_data['usdx'].rolling(window=20).corr(merged_data[symbol])
-            corr = correlation.iloc[-1]
-            #logging plus debugging
-            #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-            return price, atr, z_score, corr
+        #correlation
+        # correlation = merged_data['usdx'].rolling(window=20).corr(merged_data[symbol])
+        # corr = correlation.iloc[-1]
+        #logging plus debugging
+        #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
+        return price, atr, z_score, trend
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -192,29 +182,18 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            price, atr, z_score, corr = self.define_strategy(symbol)
+            price, atr, z_score, trend = self.define_strategy(symbol)
             tick = mt5.symbol_info_tick(symbol)
-            if price is None or atr is None or z_score is None or corr is None or tick is None:
+            if price is None or atr is None or z_score is None or trend is None or tick is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Corr: {corr}')
-            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Corr: {corr}')
-
-            if symbol == self.symbols[-1]:
-                if corr > 0.1:
-                    if z_score > self.upper_threshold:
-                        min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                        target_profit = round(tick.bid - (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                    elif z_score < self.lower_threshold:
-                        min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                        target_profit = round(tick.ask + (self.tp_factor * atr), 5)
-                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Corr: {trend}')
+            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Corr: {trend}')
             
             if symbol == self.symbols[0]:
-                if corr > 0.5:
+                if trend == 0 and atr<0.3:
                     if z_score > self.upper_threshold:
                         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
@@ -225,19 +204,7 @@ class MysteryOfTheMissingHeart:
                         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
             
             if symbol == self.symbols[1]:
-                print(f'{symbol} is sh**ty currency pair')
-                # if -0.8 < corr < 0.8:
-                #     if z_score > self.upper_threshold:
-                #         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                #         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                #     elif z_score < self.lower_threshold:
-                #         min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                #         target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-            
-            if symbol == self.symbols[2]:
-                if -0.8 < corr < 0.8:
+                if trend==0 and atr<0.0002:
                     if z_score < self.lower_threshold:
                         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
@@ -249,10 +216,10 @@ class MysteryOfTheMissingHeart:
 
 
 if __name__ == "__main__":
-    symbols = ['USDJPY.sml', 'USDSEK', 'USDCHF', 'EURUSD.sml']
+    symbols = ['USDJPY.sml', 'USDCHF']
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
 
     while True:
         current_time = datetime.now() 
