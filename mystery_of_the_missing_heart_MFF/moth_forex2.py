@@ -1,40 +1,39 @@
 import MetaTrader5 as mt5
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import numpy as np
+from functools import reduce
 import talib
 import time
+from time import sleep
+from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
-from hurst import compute_Hc
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id7"))
-mt_password = os.getenv("mt_password7")
-mt_server_name = os.getenv("mt_server_name7")
+mt_login_id = int(os.getenv("mt_login_id6"))
+mt_password = os.getenv("mt_password6")
+mt_server_name = os.getenv("mt_server_name6")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.75
     BCount = 1
     PullBack = 1
-    trend_threshold = 0.15
-    # hurst_upper = 0.6
-    # hurst_lower = 0.4
 
-    def __init__(self, symbols):
+    def __init__(self, symbols, lot_size):
         self.symbols = symbols
+        self.lot = lot_size
         self.order_result_comment = None
         self.pos_summary = None
         #self.Invested = None
         if not mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
             quit()
+
         for symbol in self.symbols:
             if self.check_symbol(symbol):
                 print(f"Symbol {symbol} is in the Market Watch.")
@@ -69,14 +68,13 @@ class MysteryOfTheMissingHeart:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return pd.DataFrame()  # Return an empty DataFrame
 
-    def place_order(self, symbol, order_type, sl_price, tp_price, lotsize):
+    def place_order(self, symbol, order_type, sl_price, tp_price):
         #point = mt5.symbol_info(self.symbol).point
         #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
         tick = mt5.symbol_info_tick(symbol)
         symbol_info = mt5.symbol_info(symbol)
-
-        if tick is None:
+        if tick == None:
             logging.error(f'order_send failed, error code={mt5.last_error()}')
             return False
         
@@ -88,16 +86,16 @@ class MysteryOfTheMissingHeart:
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": symbol,
-            "volume": lotsize,
+            "volume": self.lot,
             "type": order_type,
             "price": price,
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 772473,
+            "magic": 191818,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_FOK,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         result = mt5.order_send(request)
         if result is None:
@@ -114,7 +112,7 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        symbol_df = self.get_hist_data(symbol, 5000).dropna()
+        symbol_df = self.get_hist_data(symbol, 1000).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None
@@ -134,27 +132,13 @@ class MysteryOfTheMissingHeart:
         #atr
         atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=16)
         atr = atrs[-1]
-
-        #hurst exponent
-        close_price = np.array(symbol_df['close'])
-        hurst = compute_Hc(close_price[-100:], kind='price')[0]
-
-        #trend factor
-        # upperband, _, lowerband = talib.BBANDS(symbol_df.close.values, timeperiod=20, matype=1)
-        # symbol_df['trend'] = upperband - lowerband
-        # symbol_df['trend_norm'] = (symbol_df['trend'] - symbol_df['trend'].min()) / (symbol_df['trend'].max() - symbol_df['trend'].min())
-        # trend = symbol_df['trend_norm'].iloc[-1]
-
-        #sma
-        # sma = talib.SMA(symbol_df['close'].values, timeperiod=4)
-        # ma = sma[-1]
-        
+        #trend
+        trendmode = talib.HT_TRENDMODE(symbol_df['close'].values)
+        trend = trendmode[-1]
         #signal
         signal = symbol_df['Signal'].iloc[-2]
 
-        #logging plus debugging
-        #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, round(hurst, 3)
+        return atr, signal, trend
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -174,73 +158,78 @@ class MysteryOfTheMissingHeart:
                 print(f"  Short positions: {short_positions}")
         
         print("--------------------------------------------------------------------------------------------------")
-
         
     def execute_trades(self):
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal, hurst = self.define_strategy(symbol)
-            if atr is None or signal is None or hurst is None:
+            atr, signal, trend = self.define_strategy(symbol)
+            tick = mt5.symbol_info_tick(symbol)
+            if atr is None or signal is None or trend is None or tick is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
-            tick = mt5.symbol_info_tick(symbol)
-            if tick is None: continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
-            print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Trend: {trend}')
+            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Trend: {trend}')
             
-            if symbol == "Step Index":
-                lotsize = 0.1
-            if symbol == "Volatility 10 Index":
-                lotsize = 0.30
-            if symbol == "Volatility 25 Index":
-                lotsize = 0.50
-            if hurst < 0.6:
-                if signal==1:
-                    min_stop = round(tick.ask - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask + (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-                if signal==-1:
-                    min_stop = round(tick.bid + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid - (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
+            if symbol == self.symbols[0]:
+                if trend == 0 and atr<0.003:
+                    if signal==-1:
+                        min_stop = round(tick.ask + (1.5 * atr), 5)
+                        target_profit = round(tick.ask - (2 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                    elif signal==1:
+                        min_stop = round(tick.bid - (1.5 * atr), 5)
+                        target_profit = round(tick.bid + (2 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            
+            if symbol == self.symbols[1]:
+                if trend==0 and atr<0.002:
+                    if signal==-1:
+                        min_stop = round(tick.ask + (1.5 * atr), 5)
+                        target_profit = round(tick.ask - (1.5 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                    elif signal==1:
+                        min_stop = round(tick.bid - (1.5 * atr), 5)
+                        target_profit = round(tick.bid + (1.5 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 
 if __name__ == "__main__":
-    symbols = ["Volatility 10 Index"] #"Step Index",  "Volatility 25 Index"
+    symbols = ['GBPUSD', 'USDCHF']
     last_action_timestamp = 0
-    last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols)
+    last_display_timestamp = 0 
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
+
     while True:
-        current_time = datetime.now()
+        current_time = datetime.now() 
         # Launch the algorithm
         current_timestamp = int(time.time())
         if (current_timestamp - last_action_timestamp) >= 3600:
             start_time = time.time()
-            # Account Info
-            if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                current_account_info = mt5.account_info()
-                print("_______________________________________________________________________________________________________")
-                print("DERIV LIVE ACCOUNT: MOMENTUM SCALPING STRATEGY")
-                print("_______________________________________________________________________________________________________")
-                print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                if current_account_info is not None:
-                    print(f"Balance: {current_account_info.balance} USD,\t"
-                        f"Equity: {current_account_info.equity} USD, \t"
-                        f"Profit: {current_account_info.profit} USD")
-                else:
-                    print("Failed to retrieve account information.")
-                print("-------------------------------------------------------------------------------------------")
-                # Look for trades
-                trader.execute_trades()
-                #execution_time = time.time() - start_time
-                #last_action_timestamp = int(time.time()) - execution_time
-                #if (current_timestamp - last_display_timestamp) > 900:
-                print("Open Positions:---------------------------------------------------------------------------------")
-                #start_time = time.time()
-                trader.check_position()
-                execution_time = time.time() - start_time
-                last_action_timestamp = int(time.time()) - (execution_time)
+            if not (23 <= current_time.hour <= 3):
+                # Account Info
+                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                    current_account_info = mt5.account_info()
+                    print("_______________________________________________________________________________________________________")
+                    print("MOTH Momentum FX: MFF TRIAL ACCOUNT")
+                    print("_______________________________________________________________________________________________________")
+                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    if current_account_info is not None:
+                        print(f"Balance: {current_account_info.balance} USD,\t"
+                            f"Equity: {current_account_info.equity} USD")
+                    else:
+                        print("Failed to retrieve account information.")
+                    print("-------------------------------------------------------------------------------------------")
+                    # Look for trades
+                    trader.execute_trades()
+                    #execution_time = time.time() - start_time
+                    #last_action_timestamp = int(time.time()) - execution_time
+                    #if (current_timestamp - last_display_timestamp) > 900:
+                    print("Open Positions:---------------------------------------------------------------------------------")
+                    #start_time = time.time()
+                    trader.check_position()
+                    execution_time = time.time() - start_time
+                    last_action_timestamp = int(time.time()) - execution_time
