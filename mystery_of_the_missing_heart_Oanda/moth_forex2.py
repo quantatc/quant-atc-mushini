@@ -209,7 +209,7 @@ class MysteryOfTheMissingHeart:
 
 
 if __name__ == "__main__":
-    symbols = ['GBPUSDm', 'USDCHFm', 'USDJPYm']
+    symbols = ['GBPUSD.sml', 'USDCHF', 'USDJPY.sml']
     last_action_timestamp = 0
     last_display_timestamp = 0 
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
