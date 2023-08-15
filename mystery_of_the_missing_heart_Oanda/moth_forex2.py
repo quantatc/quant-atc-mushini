@@ -13,9 +13,9 @@ import os
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id5"))
-mt_password = os.getenv("mt_password5")
-mt_server_name = os.getenv("mt_server_name5")
+mt_login_id = int(os.getenv("mt_login_id2"))
+mt_password = os.getenv("mt_password2")
+mt_server_name = os.getenv("mt_server_name2")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
@@ -92,10 +92,10 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 129911,
+            "magic": 222422,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            "type_filling": mt5.ORDER_FILLING_FOK,
         }
         result = mt5.order_send(request)
         if result is None:
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     symbols = ['GBPUSD.sml', 'USDCHF', 'USDJPY.sml']
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.03)
 
     while True:
         current_time = datetime.now() 
@@ -225,7 +225,7 @@ if __name__ == "__main__":
                 if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                     current_account_info = mt5.account_info()
                     print("_______________________________________________________________________________________________________")
-                    print("MOTH Momentum FX: EXNESS LIVE ACCOUNT")
+                    print("MOTH Momentum FX: OANDA LIVE ACCOUNT")
                     print("_______________________________________________________________________________________________________")
                     print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                     if current_account_info is not None:
