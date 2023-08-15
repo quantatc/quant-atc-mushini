@@ -13,9 +13,9 @@ import os
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id6"))
-mt_password = os.getenv("mt_password6")
-mt_server_name = os.getenv("mt_server_name6")
+mt_login_id = int(os.getenv("mt_login_id5"))
+mt_password = os.getenv("mt_password5")
+mt_server_name = os.getenv("mt_server_name5")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
@@ -92,7 +92,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 191818,
+            "magic": 322443,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
@@ -195,10 +195,21 @@ class MysteryOfTheMissingHeart:
                         min_stop = round(tick.bid - (1.5 * atr), 5)
                         target_profit = round(tick.bid + (1.5 * atr), 5)
                         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            
+            if symbol == self.symbols[2]:
+                if trend==0 and atr<0.3:
+                    if signal==-1:
+                        min_stop = round(tick.ask + (1.5 * atr), 5)
+                        target_profit = round(tick.ask - (1.5 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                    elif signal==1:
+                        min_stop = round(tick.bid - (1.5 * atr), 5)
+                        target_profit = round(tick.bid + (1.5 * atr), 5)
+                        self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 
 if __name__ == "__main__":
-    symbols = ['GBPUSD', 'USDCHF']
+    symbols = ['GBPUSDm', 'USDCHFm', 'USDJPYm']
     last_action_timestamp = 0
     last_display_timestamp = 0 
     trader = MysteryOfTheMissingHeart(symbols, lot_size=0.01)
@@ -214,7 +225,7 @@ if __name__ == "__main__":
                 if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
                     current_account_info = mt5.account_info()
                     print("_______________________________________________________________________________________________________")
-                    print("MOTH Momentum FX: MFF TRIAL ACCOUNT")
+                    print("MOTH Momentum FX: Exness Live ACCOUNT")
                     print("_______________________________________________________________________________________________________")
                     print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                     if current_account_info is not None:
