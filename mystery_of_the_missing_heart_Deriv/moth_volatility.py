@@ -195,7 +195,7 @@ class MysteryOfTheMissingHeart:
             if symbol == "Step Index":
                 lotsize = 0.1
             if symbol == "Volatility 10 Index":
-                lotsize = 0.90
+                lotsize = 0.50
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
             if hurst < 0.6:
