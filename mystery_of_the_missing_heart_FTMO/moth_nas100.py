@@ -162,6 +162,8 @@ class MysteryOfTheMissingHeart:
         rolling_mean = spread.rolling(window=20).mean()
         rolling_std = spread.rolling(window=20).std()
         z_scores = (spread - rolling_mean) / rolling_std
+        if len(z_scores) == 0:
+            return None, None, None, None
         z_score = z_scores.values[-1]
 
         #logging plus debugging
