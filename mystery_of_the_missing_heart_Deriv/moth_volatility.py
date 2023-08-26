@@ -156,6 +156,44 @@ class MysteryOfTheMissingHeart:
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
         return atr, signal, round(hurst, 3)
     
+    def close_positions(self, position):
+        """ Function to close a specific position """
+        # Initialize the connection if there is not
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+
+        tick = mt5.symbol_info_tick(position.symbol)
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": position.volume,
+            "type": mt5.ORDER_TYPE_BUY if position.type == mt5.ORDER_TYPE_SELL else mt5.ORDER_TYPE_SELL,
+            "position": position.ticket,
+            "price": tick.ask if position.type == mt5.ORDER_TYPE_BUY else tick.bid,
+            "deviation": 20,
+            "magic": 664454,
+            "comment": "correlation algo order",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        # Send a trading request
+        result = mt5.order_send(request)
+        if result is None:
+            print("Failed to close position.")
+        elif result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to close position: {result.comment}")
+        else:
+            print(f"Closed position: {position.symbol} ({position.volume} lots)")
+    
+    def close_all_positions(self):
+        """ Function to close all open positions """
+        mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password)
+        positions = mt5.positions_get()
+        if positions is None or len(positions) == 0:
+            print("No open positions to close.")
+        else:
+            for position in positions:
+                self.close_positions(position)
+    
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
         # Initialize the connection if it is not already initialized
@@ -175,7 +213,6 @@ class MysteryOfTheMissingHeart:
         
         print("--------------------------------------------------------------------------------------------------")
 
-        
     def execute_trades(self):
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -198,7 +235,7 @@ class MysteryOfTheMissingHeart:
                 lotsize = 0.30
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
-            if hurst < 0.6:
+            if hurst < 0.7:
                 if signal==1:
                     min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                     target_profit = round(tick.ask + (self.tp_factor * atr), 5)
@@ -207,7 +244,8 @@ class MysteryOfTheMissingHeart:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-
+            else:
+                self.close_all_positions()
 
 if __name__ == "__main__":
     symbols = ["Volatility 10 Index"] #"Step Index",  "Volatility 25 Index"
