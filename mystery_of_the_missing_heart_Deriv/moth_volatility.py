@@ -19,8 +19,8 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.75
+    sl_factor = 1.75
+    tp_factor = 1
     BCount = 1
     PullBack = 1
     trend_threshold = 0.15
@@ -236,11 +236,11 @@ class MysteryOfTheMissingHeart:
             if symbol == "Volatility 25 Index":
                 lotsize = 0.50
             if hurst < 0.7:
-                if signal==1:
+                if signal==-1:
                     min_stop = round(tick.ask - (self.sl_factor * atr), 5)
                     target_profit = round(tick.ask + (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
-                if signal==-1:
+                if signal==1:
                     min_stop = round(tick.bid + (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit, lotsize=lotsize)
