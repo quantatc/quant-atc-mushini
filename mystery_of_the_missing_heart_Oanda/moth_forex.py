@@ -149,7 +149,7 @@ class MysteryOfTheMissingHeart:
         rolling_mean = spread.rolling(window=20).mean()
         rolling_std = spread.rolling(window=20).std()
         z_scores = (spread - rolling_mean) / rolling_std
-        z_score = z_scores.iloc[-1]
+        z_score = z_scores.values[-1]
 
         #correlation
         # correlation = merged_data['usdx'].rolling(window=20).corr(merged_data[symbol])
