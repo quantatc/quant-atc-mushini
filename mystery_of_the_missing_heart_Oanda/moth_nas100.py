@@ -1,5 +1,4 @@
 import MetaTrader5 as mt5
-from hurst import compute_Hc
 import yfinance as yf
 from datetime import datetime
 import pandas as pd
@@ -12,24 +11,21 @@ from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
- 
+from hurst import compute_Hc
 
 load_dotenv()
 # Load environment variables
 mt_login_id = int(os.getenv("mt_login_id2"))
 mt_password = os.getenv("mt_password2")
-mt_server_name = os.getenv("mt_server_name2") 
+mt_server_name = os.getenv("mt_server_name2")
 
 if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 2
-    BCount = 1
-    PullBack = 1
-    hurst_upper = 0.7
-    hurst_lower = 0.4
+    sl_factor = 2
+    tp_factor = 1.5
+    z_threshold = 0.5
 
     def __init__(self, symbols, lot_size):
         self.symbols = symbols
@@ -73,6 +69,20 @@ class MysteryOfTheMissingHeart:
         except KeyError:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return pd.DataFrame()  # Return an empty DataFrame
+    
+    def get_dxy_data(self, symbol= "MNQ=F"):
+        data = yf.download(symbol, period="10d", interval="1h")
+        data.index.name = 'date'
+        usdx_yahoo = data.tail(120)
+        usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
+        usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
+        usdx_yahoo = usdx_yahoo[:-1]
+        try:
+            usdx_yahoo.index = usdx_yahoo.index.tz_localize('UTC')
+        except TypeError:
+            print("failed tz_localize, trying tz_convert")
+            usdx_yahoo.index = usdx_yahoo.index.tz_convert('UTC')
+        return usdx_yahoo
 
     def place_order(self, symbol, order_type, sl_price, tp_price):
         #point = mt5.symbol_info(self.symbol).point
@@ -80,6 +90,9 @@ class MysteryOfTheMissingHeart:
         deviation = 20
         tick = mt5.symbol_info_tick(symbol)
         symbol_info = mt5.symbol_info(symbol)
+        if tick is None:
+            logging.error(f'missing data somewhere, error code={mt5.last_error()}')
+            return False
         
         if order_type == mt5.ORDER_TYPE_BUY:
             price = tick.ask
@@ -95,12 +108,14 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 999888,
+            "magic": 992139,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_FOK,
         }
         result = mt5.order_send(request)
+        if mt5.last_error()[0] == -10018:
+            print('Market is Closed!')
         if result is None:
             logging.error(f'order_send failed, error code={mt5.last_error()}')
             return False
@@ -115,37 +130,45 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        symbol_df = self.get_hist_data(symbol, 1200).dropna()
+        #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
+        usdx = self.get_dxy_data()
+        symbol_df = self.get_hist_data(symbol, 120).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None
-        # Generate the signals based on the strategy rules
-        symbol_df['up_closes'] = symbol_df['close'] - symbol_df['open'] > 0
-        symbol_df['down_closes'] = symbol_df['close'] - symbol_df['open'] < 0
-        symbol_df['Signal'] = 0
-        symbol_df.loc[symbol_df['up_closes'].rolling(window=self.BCount).sum() > symbol_df['down_closes'].rolling(window=self.BCount).sum(), 'Signal'] = 1
-        symbol_df.loc[symbol_df['up_closes'].rolling(window=self.BCount).sum() < symbol_df['down_closes'].rolling(window=self.BCount).sum(), 'Signal'] = -1
-        symbol_df['Signal'] = symbol_df['Signal'].shift(-self.PullBack)
-        
-        # Drop unnecessary columns
-        symbol_df.drop(['up_closes', 'down_closes'], axis=1, inplace=True)
-        # Remove NaN values
-        symbol_df.dropna(inplace=True)
+            return None, None, None, None
+        symbol_close = symbol_df["close"].rename(symbol)
+        try:
+            symbol_close.index = symbol_close.index.tz_localize('UTC')
+        except TypeError:
+            print("failed tz_localize, trying tz_convert")
+            symbol_close.index = symbol_close.index.tz_convert('UTC')
+        dfs = [usdx, symbol_close]
+        merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
+        merged_data.dropna(inplace=True)
+
+        #price
+        price = symbol_df["close"].iloc[-1]
 
         #atr
-        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=50)
+        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=10)
         atr = atrs[-1]
-
+        
         #hurst exponent
         close_price = np.array(symbol_df['close'])
         hurst = compute_Hc(close_price[-100:], kind='price')[0]
-        
+
         #z_scores
-        signal = symbol_df['Signal'].iloc[-1]
+        spread = merged_data["usdx"] - merged_data[symbol]
+        rolling_mean = spread.rolling(window=20).mean()
+        rolling_std = spread.rolling(window=20).std()
+        z_scores = (spread - rolling_mean) / rolling_std
+        if len(z_scores) == 0:
+            return None, None, None, None
+        z_score = z_scores.values[-1]
 
         #logging plus debugging
-        #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, hurst
+        #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
+        return price, atr, round(z_score, 2), round(hurst, 2)
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -171,67 +194,63 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            atr, signal, hurst = self.define_strategy(symbol)
-            if atr is None or signal is None or hurst is None:
-                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
-                continue
+            price, atr, z_score, hurst = self.define_strategy(symbol)
             tick = mt5.symbol_info_tick(symbol)
-            if tick is None:
+            if price is None or atr is None or z_score is None or tick is None or hurst is None:
+                print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
-            print(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}, Hurst: {hurst}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
+            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Hurst: {hurst}')
             
-            # if self.hurst_lower <= hurst <= self.hurst_upper:
-            #     if signal==1:
-            #         min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-            #         target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
-            
-            #     if signal==-1:
-            #         min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-            #         target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-            #         self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-            
+            if atr < 100 and (0.4 < hurst < 0.8):
+                if z_score < -self.z_threshold:
+                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                    
+                elif z_score > self.z_threshold:
+                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
 
 if __name__ == "__main__":
 
-    symbols = ['US100.sml', 'GER30.sml']
+    symbols = ['US100']
 
     last_action_timestamp = 0
-    last_display_timestamp = 0
-
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.02)
+    last_display_timestamp = 0 
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.4)
 
     while True:
         current_time = datetime.now() 
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 300:
+        if (current_timestamp - last_action_timestamp) >= 3600:
             start_time = time.time()
-            if not (23 <= current_time.hour <= 3):
-                # Account Info
-                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                    current_account_info = mt5.account_info()
-                    print("_______________________________________________________________________________________________________")
-                    print("OANDA LIVE ACCOUNT: MOTH CORRELATION STRATEGY")
-                    print("_______________________________________________________________________________________________________")
-                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                    if current_account_info is not None:
-                        print(f"Balance: {current_account_info.balance} USD,\t"
-                            f"Equity: {current_account_info.equity} USD, \t"
-                            f"Profit: {current_account_info.profit} USD")
-                    else:
-                        print("Failed to retrieve account information.")
-                    print("-------------------------------------------------------------------------------------------")
-                    # Look for trades
-                    trader.execute_trades()
-                    #execution_time = time.time() - start_time
-                    #last_action_timestamp = int(time.time()) - execution_time
-                    #if (current_timestamp - last_display_timestamp) > 900:
-                    print("Open Positions:---------------------------------------------------------------------------------")
-                    #start_time = time.time()
-                    trader.check_position()
-                    execution_time = time.time() - start_time
-                    last_action_timestamp = int(time.time()) - execution_time
+            #if not (23 <= current_time.hour <= 1):
+            # Account Info
+            if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                current_account_info = mt5.account_info()
+                print("_______________________________________________________________________________________________________")
+                print("MOTH CORRELATION: OANDA LIVE ACCOUNT")
+                print("_______________________________________________________________________________________________________")
+                print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                if current_account_info is not None:
+                    print(f"Balance: {current_account_info.balance} USD,\t"
+                        f"Equity: {current_account_info.equity} USD, \t"
+                        f"Profit: {current_account_info.profit} USD")
+                else:
+                    print("Failed to retrieve account information.")
+                print("-------------------------------------------------------------------------------------------")
+                # Look for trades
+                trader.execute_trades()
+                #execution_time = time.time() - start_time
+                #last_action_timestamp = int(time.time()) - execution_time
+                #if (current_timestamp - last_display_timestamp) > 900:
+                print("Open Positions:---------------------------------------------------------------------------------")
+                #start_time = time.time()
+                trader.check_position()
+                execution_time = time.time() - start_time
+                last_action_timestamp = int(time.time()) - execution_time
