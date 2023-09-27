@@ -219,7 +219,7 @@ if __name__ == "__main__":
     symbols = ['USDJPY.sml', 'USDCHF']
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.04)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.1)
 
     while True:
         current_time = datetime.now() 
