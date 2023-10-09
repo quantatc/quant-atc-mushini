@@ -173,8 +173,8 @@ class MysteryOfTheMissingHeart:
         atr = atrs[-1]
         
         #hurst exponent
-        close_price = np.array(symbol_df['close'])
-        hurst = compute_Hc(close_price[-100:], kind='price')[0]
+        # close_price = np.array(symbol_df['close'])
+        # hurst = compute_Hc(close_price[-100:], kind='price')[0]
 
         #z_scores
         spread = merged_data["usdx"] - merged_data[symbol]
@@ -187,7 +187,7 @@ class MysteryOfTheMissingHeart:
 
         #logging plus debugging
         #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-        return price, atr, round(z_score, 2), round(hurst, 2)
+        return price, atr, round(z_score, 2)  #, round(hurst, 2)
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -213,15 +213,15 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            price, atr, z_score, hurst = self.define_strategy(symbol)
+            price, atr, z_score = self.define_strategy(symbol) #, hurst
             tick = mt5.symbol_info_tick(symbol)
-            if price is None or atr is None or z_score is None or tick is None or hurst is None:
+            if price is None or z_score is None or tick is None or atr is None: #or hurst is None
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
-            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Hurst: {hurst}')
+            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}') #, Hurst: {hurst}
             positions = mt5.positions_get(symbol=symbol)
             positions = mt5.positions_get(symbol=symbol)
             if positions is None:
@@ -231,16 +231,16 @@ class MysteryOfTheMissingHeart:
                 long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
                 short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
             
-            if (0.4 < hurst < 0.8): #atr < 100 and
-                if z_score < -self.z_threshold and short_positions == 0:
-                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                    
-                elif z_score > self.z_threshold and long_positions==0:
-                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            # if (0.4 < hurst < 0.8): #atr < 100 and
+            if z_score < -self.z_threshold and short_positions == 0:
+                min_stop = round(tick.ask + (self.sl_factor * atr), 5)
+                target_profit = round(tick.ask - (self.tp_factor * atr), 5)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
+                
+            elif z_score > self.z_threshold and long_positions==0:
+                min_stop = round(tick.bid - (self.sl_factor * atr), 5)
+                target_profit = round(tick.bid + (self.tp_factor * atr), 5)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
             
             if positions is not None:
                 for position in positions:
