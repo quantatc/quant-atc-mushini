@@ -125,6 +125,25 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Order placed successfully: {result}')
         return True
     
+    def close_position(self, position):
+        order_type = mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
+        price = position.price_current
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": position.volume,
+            "type": order_type,
+            "price": price,
+            "position": position.ticket,
+            "magic": 442313,
+            "comment": "python script close",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to close position {position.ticket}, error code={mt5.last_error()}")
+    
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
@@ -203,17 +222,32 @@ class MysteryOfTheMissingHeart:
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
             print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Hurst: {hurst}')
+            positions = mt5.positions_get(symbol=symbol)
+            positions = mt5.positions_get(symbol=symbol)
+            if positions is None:
+                long_positions = 0
+                short_positions = 0
+            else:
+                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
             
-            if atr < 100 and (0.4 < hurst < 0.8):
-                if z_score < -self.z_threshold:
+            if (0.4 < hurst < 0.8): #atr < 100 and
+                if z_score < -self.z_threshold and short_positions == 0:
                     min_stop = round(tick.ask + (self.sl_factor * atr), 5)
                     target_profit = round(tick.ask - (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
                     
-                elif z_score > self.z_threshold:
+                elif z_score > self.z_threshold and long_positions==0:
                     min_stop = round(tick.bid - (self.sl_factor * atr), 5)
                     target_profit = round(tick.bid + (self.tp_factor * atr), 5)
                     self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            
+            if positions is not None:
+                for position in positions:
+                    entry_time = datetime.fromtimestamp(position.time, tz=timezone('UTC'))
+                    current_time = datetime.now(timezone('UTC'))
+                    if current_time - entry_time > pd.Timedelta('12 hours'):
+                        self.close_position(position)
 
 if __name__ == "__main__":
 
