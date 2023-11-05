@@ -230,34 +230,31 @@ if __name__ == "__main__":
         current_utc_datetime = datetime.utcnow()
         current_utc_time = current_utc_datetime.time()
         current_utc_weekday = current_utc_datetime.weekday()
-        # Check if it's the weekend
-        if current_utc_weekday in [5, 6]:
-            print("-------------------------------------------------------------------------------------------")
-            print("It's weekend Quant. Rest, the market is closed!")
-            print("-------------------------------------------------------------------------------------------")
-            continue
+        
         # Launch the algorithm
         if time(13, 30) <= current_utc_time <= time(19, 0):
             current_timestamp = int(time_module.time())
-            if (current_timestamp - last_action_timestamp) >= 3600:
-                start_time = time_module.time()
-                # Account Info
-                if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                    current_account_info = mt5.account_info()
-                    print("_______________________________________________________________________________________________________")
-                    print("MOTH CORRELATION: XM DEMO ACCOUNT")
-                    print("_______________________________________________________________________________________________________")
-                    print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                    if current_account_info is not None:
-                        print(f"Balance: {current_account_info.balance} ZAR,\t"
-                            f"Equity: {current_account_info.equity} ZAR, \t"
-                            f"Profit: {current_account_info.profit} ZAR")
-                    else:
-                        print("Failed to retrieve account information.")
-                    print("-------------------------------------------------------------------------------------------")
-                    # Look for trades
-                    trader.execute_trades()
-                    print("Open Positions:---------------------------------------------------------------------------------")
-                    trader.check_position()
-                    execution_time = time_module.time() - start_time
-                    last_action_timestamp = int(time_module.time()) - execution_time
+            if (current_timestamp - last_action_timestamp) >= 60: #3600
+                # Check if it's the weekend
+                if current_utc_weekday in [5, 6]:
+                    start_time = time_module.time()
+                    # Account Info
+                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                        current_account_info = mt5.account_info()
+                        print("_______________________________________________________________________________________________________")
+                        print("MOTH CORRELATION: XM DEMO ACCOUNT")
+                        print("_______________________________________________________________________________________________________")
+                        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        if current_account_info is not None:
+                            print(f"Balance: {current_account_info.balance} ZAR,\t"
+                                f"Equity: {current_account_info.equity} ZAR, \t"
+                                f"Profit: {current_account_info.profit} ZAR")
+                        else:
+                            print("Failed to retrieve account information.")
+                        print("-------------------------------------------------------------------------------------------")
+                        # Look for trades
+                        trader.execute_trades()
+                        print("Open Positions:---------------------------------------------------------------------------------")
+                        trader.check_position()
+                        execution_time = time_module.time() - start_time
+                        last_action_timestamp = int(time_module.time()) - execution_time
