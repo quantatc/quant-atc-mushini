@@ -234,9 +234,9 @@ if __name__ == "__main__":
         # Launch the algorithm
         if time(13, 30) <= current_utc_time <= time(19, 0):
             current_timestamp = int(time_module.time())
-            if (current_timestamp - last_action_timestamp) >= 60: #3600
+            if (current_timestamp - last_action_timestamp) >= 3600: #3600
                 # Check if it's the weekend
-                if current_utc_weekday in [5, 6]:
+                if current_utc_weekday not in [5, 6]:
                     start_time = time_module.time()
                     # Account Info
                     if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
