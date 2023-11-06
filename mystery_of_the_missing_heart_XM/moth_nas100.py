@@ -201,13 +201,15 @@ class MysteryOfTheMissingHeart:
                 long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
                 short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
             
+            spread = abs(tick.bid-tick.ask)
+            
             #execute trades
             if z_score < -self.z_threshold and short_positions == 0:
-                target_profit = round(tick.ask - self.tp_pips, 2)
+                target_profit = round(tick.ask - self.tp_pips - spread, 2)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, tp_price= target_profit)
                 
             elif z_score > self.z_threshold and long_positions==0:
-                target_profit = round(tick.bid + self.tp_pips, 2)
+                target_profit = round(tick.bid + self.tp_pips + spread, 2)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, tp_price= target_profit)
             
             if positions is not None:
