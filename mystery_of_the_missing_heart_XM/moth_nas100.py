@@ -234,7 +234,7 @@ if __name__ == "__main__":
         current_utc_weekday = current_utc_datetime.weekday()
         
         # Launch the algorithm
-        if time(13, 30) <= current_utc_time <= time(19, 0):
+        if time(13, 0) <= current_utc_time <= time(19, 0):
             current_timestamp = int(time_module.time())
             if (current_timestamp - last_action_timestamp) >= 3600: #3600
                 # Check if it's the weekend
