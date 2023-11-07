@@ -1,17 +1,15 @@
 import MetaTrader5 as mt5
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, time
 import pandas as pd
 import numpy as np
 from functools import reduce
-import talib
-import time
-from time import sleep
+import time as time_module
+# from time import sleep
 from pytz import timezone
 import logging
 from dotenv import load_dotenv
 import os
-from hurst import compute_Hc
 
 load_dotenv()
 # Load environment variables
@@ -23,8 +21,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 2
-    tp_factor = 1.5
+    tp_pips = 0.50  # 50 points profit target
     z_threshold = 0.5
 
     def __init__(self, symbols, lot_size):
@@ -71,9 +68,9 @@ class MysteryOfTheMissingHeart:
             return pd.DataFrame()  # Return an empty DataFrame
     
     def get_dxy_data(self, symbol= "MNQ=F"):
-        data = yf.download(symbol, period="10d", interval="1h")
+        data = yf.download(symbol, period="15d", interval="1h")
         data.index.name = 'date'
-        usdx_yahoo = data.tail(120)
+        usdx_yahoo = data.tail(121)
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
         usdx_yahoo = usdx_yahoo['close'].dropna().rename('usdx')
         usdx_yahoo = usdx_yahoo[:-1]
@@ -84,7 +81,7 @@ class MysteryOfTheMissingHeart:
             usdx_yahoo.index = usdx_yahoo.index.tz_convert('UTC')
         return usdx_yahoo
 
-    def place_order(self, symbol, order_type, sl_price, tp_price):
+    def place_order(self, symbol, order_type, tp_price, sl_price=None):
         #point = mt5.symbol_info(self.symbol).point
         #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
@@ -132,43 +129,39 @@ class MysteryOfTheMissingHeart:
         
         #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
         usdx = self.get_dxy_data()
+        # print(usdx)
         symbol_df = self.get_hist_data(symbol, 120).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None, None
+            return None, None
         symbol_close = symbol_df["close"].rename(symbol)
+        # print(symbol_close)
         try:
             symbol_close.index = symbol_close.index.tz_localize('UTC')
         except TypeError:
             print("failed tz_localize, trying tz_convert")
             symbol_close.index = symbol_close.index.tz_convert('UTC')
         dfs = [usdx, symbol_close]
+        # print(dfs[0], dfs[1])
         merged_data = reduce(lambda left,right: pd.merge(left,right,left_index=True,right_index=True, how='outer'), dfs)
         merged_data.dropna(inplace=True)
 
         #price
         price = symbol_df["close"].iloc[-1]
 
-        #atr
-        atrs = talib.ATR(symbol_df['high'].values, symbol_df['low'].values, symbol_df['close'].values, timeperiod=10)
-        atr = atrs[-1]
-        
-        #hurst exponent
-        close_price = np.array(symbol_df['close'])
-        hurst = compute_Hc(close_price[-100:], kind='price')[0]
-
         #z_scores
         spread = merged_data["usdx"] - merged_data[symbol]
         rolling_mean = spread.rolling(window=20).mean()
         rolling_std = spread.rolling(window=20).std()
         z_scores = (spread - rolling_mean) / rolling_std
+        # print(z_scores)
         if len(z_scores) == 0:
-            return None, None, None, None
+            return None, None
         z_score = z_scores.values[-1]
 
         #logging plus debugging
-        #print(f"Price:   {price}, ATR:  {atr}, Z-Score:   {z_score}")
-        return price, atr, round(z_score, 2), round(hurst, 2)
+        #print(f"Price:   {price}, Z-Score:   {z_score}")
+        return price, round(z_score, 2)
     
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
@@ -194,26 +187,41 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
         for symbol in self.symbols:
-            price, atr, z_score, hurst = self.define_strategy(symbol)
+            price, z_score = self.define_strategy(symbol)
             tick = mt5.symbol_info_tick(symbol)
-            if price is None or atr is None or z_score is None or tick is None or hurst is None:
+            if price is None or z_score is None or tick is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             # check if we are invested
             #self.Invested = self.check_position(symbol)
-            logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}')
-            print(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Z-score: {z_score}, Hurst: {hurst}')
+            logging.info(f'Symbol: {symbol}, Last Price:   {price}, Z-score: {z_score}')
+            print(f'Symbol: {symbol}, Last Price:   {price}, Z-score: {z_score}')
+            positions = mt5.positions_get(symbol=symbol)
+            positions = mt5.positions_get(symbol=symbol)
+            if positions is None:
+                long_positions = 0
+                short_positions = 0
+            else:
+                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
             
-            if atr < 100 and (0.4 < hurst < 0.8):
-                if z_score < -self.z_threshold:
-                    min_stop = round(tick.ask + (self.sl_factor * atr), 5)
-                    target_profit = round(tick.ask - (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price= min_stop, tp_price= target_profit)
-                    
-                elif z_score > self.z_threshold:
-                    min_stop = round(tick.bid - (self.sl_factor * atr), 5)
-                    target_profit = round(tick.bid + (self.tp_factor * atr), 5)
-                    self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price= min_stop, tp_price= target_profit)
+            spread = abs(tick.bid-tick.ask)
+            
+            #execute trades
+            if z_score < -self.z_threshold and short_positions == 0:
+                target_profit = round(tick.ask - self.tp_pips - spread, 2)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, tp_price= target_profit)
+                
+            elif z_score > self.z_threshold and long_positions==0:
+                target_profit = round(tick.bid + self.tp_pips + spread, 2)
+                self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, tp_price= target_profit)
+            
+            if positions is not None:
+                for position in positions:
+                    entry_time = datetime.fromtimestamp(position.time, tz=timezone('UTC'))
+                    current_time = datetime.now(timezone('UTC'))
+                    if current_time - entry_time > pd.Timedelta('12 hours'):
+                        self.close_position(position)
 
 if __name__ == "__main__":
 
@@ -221,36 +229,38 @@ if __name__ == "__main__":
 
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.2)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.1)
 
     while True:
-        current_time = datetime.now() 
+        # current_time = datetime.now()
+        current_utc_datetime = datetime.utcnow()
+        current_utc_time = current_utc_datetime.time()
+        current_utc_weekday = current_utc_datetime.weekday()
+        
         # Launch the algorithm
-        current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 3600:
-            start_time = time.time()
-            #if not (23 <= current_time.hour <= 1):
-            # Account Info
-            if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
-                current_account_info = mt5.account_info()
-                print("_______________________________________________________________________________________________________")
-                print("MOTH CORRELATION: OANDA LIVE ACCOUNT")
-                print("_______________________________________________________________________________________________________")
-                print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                if current_account_info is not None:
-                    print(f"Balance: {current_account_info.balance} USD,\t"
-                        f"Equity: {current_account_info.equity} USD, \t"
-                        f"Profit: {current_account_info.profit} USD")
-                else:
-                    print("Failed to retrieve account information.")
-                print("-------------------------------------------------------------------------------------------")
-                # Look for trades
-                trader.execute_trades()
-                #execution_time = time.time() - start_time
-                #last_action_timestamp = int(time.time()) - execution_time
-                #if (current_timestamp - last_display_timestamp) > 900:
-                print("Open Positions:---------------------------------------------------------------------------------")
-                #start_time = time.time()
-                trader.check_position()
-                execution_time = time.time() - start_time
-                last_action_timestamp = int(time.time()) - execution_time
+        if time(7, 0) <= current_utc_time <= time(20, 0):
+            current_timestamp = int(time_module.time())
+            if (current_timestamp - last_action_timestamp) >= 3600: #3600
+                # Check if it's the weekend
+                if current_utc_weekday not in [5, 6]:
+                    start_time = time_module.time()
+                    # Account Info
+                    if mt5.initialize(login=mt_login_id, server=mt_server_name, password=mt_password):
+                        current_account_info = mt5.account_info()
+                        print("_______________________________________________________________________________________________________")
+                        print("MOTH CORRELATION: OANDA LIVE ACCOUNT")
+                        print("_______________________________________________________________________________________________________")
+                        print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        if current_account_info is not None:
+                            print(f"Balance: {current_account_info.balance} USD,\t"
+                                f"Equity: {current_account_info.equity} USD, \t"
+                                f"Profit: {current_account_info.profit} USD")
+                        else:
+                            print("Failed to retrieve account information.")
+                        print("-------------------------------------------------------------------------------------------")
+                        # Look for trades
+                        trader.execute_trades()
+                        print("Open Positions:---------------------------------------------------------------------------------")
+                        trader.check_position()
+                        execution_time = time_module.time() - start_time
+                        last_action_timestamp = int(time_module.time()) - execution_time

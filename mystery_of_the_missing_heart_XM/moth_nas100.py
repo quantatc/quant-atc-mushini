@@ -21,7 +21,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    tp_pips = 0.10  # 10 pips profit target
+    tp_pips = 0.50  #50 points profit target
     z_threshold = 0.5
 
     def __init__(self, symbols, lot_size):
@@ -234,7 +234,7 @@ if __name__ == "__main__":
         current_utc_weekday = current_utc_datetime.weekday()
         
         # Launch the algorithm
-        if time(13, 0) <= current_utc_time <= time(19, 0):
+        if time(7, 0) <= current_utc_time <= time(20, 0):
             current_timestamp = int(time_module.time())
             if (current_timestamp - last_action_timestamp) >= 3600: #3600
                 # Check if it's the weekend
