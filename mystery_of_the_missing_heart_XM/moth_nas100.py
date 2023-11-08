@@ -122,6 +122,25 @@ class MysteryOfTheMissingHeart:
         logging.info(f'Order placed successfully: {result}')
         return True
     
+    def close_position(self, position):
+        order_type = mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
+        price = position.price_current
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": position.symbol,
+            "volume": position.volume,
+            "type": order_type,
+            "price": price,
+            "position": position.ticket,
+            "magic": 281188,
+            "comment": "python script close",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        result = mt5.order_send(request)
+        if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to close position {position.ticket}, error code={mt5.last_error()}")
+    
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
@@ -216,7 +235,7 @@ class MysteryOfTheMissingHeart:
                 for position in positions:
                     entry_time = datetime.fromtimestamp(position.time, tz=timezone('UTC'))
                     current_time = datetime.now(timezone('UTC'))
-                    if current_time - entry_time > pd.Timedelta('12 hours'):
+                    if current_time - entry_time > pd.Timedelta('24 hours'):
                         self.close_position(position)
 
 if __name__ == "__main__":
@@ -225,7 +244,7 @@ if __name__ == "__main__":
 
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=1.00)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.50)
 
     while True:
         # current_time = datetime.now()
