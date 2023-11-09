@@ -21,7 +21,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    tp_pips = 1.00  #50 points profit target
+    tp_pips = 2.00  #50 points profit target
     z_threshold = 0.5
 
     def __init__(self, symbols, lot_size):
