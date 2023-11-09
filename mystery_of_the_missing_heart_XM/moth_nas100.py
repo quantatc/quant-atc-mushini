@@ -244,7 +244,7 @@ if __name__ == "__main__":
 
     last_action_timestamp = 0
     last_display_timestamp = 0 
-    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.50)
+    trader = MysteryOfTheMissingHeart(symbols, lot_size=0.2)
 
     while True:
         # current_time = datetime.now()
