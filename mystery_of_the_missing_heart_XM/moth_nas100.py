@@ -22,7 +22,7 @@ if not mt_login_id or not mt_password or not mt_server_name:
 
 class MysteryOfTheMissingHeart:
     tp_pips = 3.00  #50 points profit target
-    z_threshold = 0.5
+    z_threshold = 1
 
     def __init__(self, symbols, lot_size):
         self.symbols = symbols
@@ -50,7 +50,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_H1): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
@@ -68,7 +68,7 @@ class MysteryOfTheMissingHeart:
             return pd.DataFrame()  # Return an empty DataFrame
     
     def get_dxy_data(self, symbol= "MNQ=F"):
-        data = yf.download(symbol, period="15d", interval="1h")
+        data = yf.download(symbol, period="10d", interval="15m")
         data.index.name = 'date'
         usdx_yahoo = data.tail(121)
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
@@ -212,22 +212,21 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, Z-score: {z_score}')
             print(f'Symbol: {symbol}, Last Price:   {price}, Z-score: {z_score}')
             positions = mt5.positions_get(symbol=symbol)
-            positions = mt5.positions_get(symbol=symbol)
-            if positions is None:
-                long_positions = 0
-                short_positions = 0
-            else:
-                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
-                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
+            # if positions is None:
+            #     long_positions = 0
+            #     short_positions = 0
+            # else:
+            #     long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+            #     short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
             
             spread = abs(tick.bid-tick.ask)
             
             #execute trades
-            if z_score < -self.z_threshold and short_positions == 0:
+            if z_score < -self.z_threshold: # and short_positions == 0:
                 target_profit = round(tick.ask - self.tp_pips - spread, 2)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, tp_price= target_profit)
                 
-            elif z_score > self.z_threshold and long_positions==0:
+            elif z_score > self.z_threshold: # and long_positions==0:
                 target_profit = round(tick.bid + self.tp_pips + spread, 2)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, tp_price= target_profit)
             
@@ -253,9 +252,9 @@ if __name__ == "__main__":
         current_utc_weekday = current_utc_datetime.weekday()
         
         # Launch the algorithm
-        if time(7, 0) <= current_utc_time <= time(20, 0):
+        if time(5, 0) <= current_utc_time <= time(21, 0):
             current_timestamp = int(time_module.time())
-            if (current_timestamp - last_action_timestamp) >= 3600: #3600
+            if (current_timestamp - last_action_timestamp) >= 900: #3600
                 # Check if it's the weekend
                 if current_utc_weekday not in [5, 6]:
                     start_time = time_module.time()
