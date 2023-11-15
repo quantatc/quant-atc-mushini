@@ -68,7 +68,7 @@ class MysteryOfTheMissingHeart:
             return pd.DataFrame()  # Return an empty DataFrame
     
     def get_dxy_data(self, symbol= "MNQ=F"):
-        data = yf.download(symbol, period="10d", interval="15m")
+        data = yf.download(symbol, period="7d", interval="15m")
         data.index.name = 'date'
         usdx_yahoo = data.tail(121)
         usdx_yahoo.columns = map(str.lower, usdx_yahoo.columns)
@@ -147,7 +147,11 @@ class MysteryOfTheMissingHeart:
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
         #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
-        usdx = self.get_dxy_data()
+        try:
+            usdx = self.get_dxy_data()
+        except:
+            print("yfinance:['MNQ=F']: Exception('%ticker%: No price data found, symbol may be delisted (period=7d)')")
+            return None, None
         symbol_df = self.get_hist_data(symbol, 120).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
