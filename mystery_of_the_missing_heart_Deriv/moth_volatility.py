@@ -149,10 +149,10 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
         
-        symbol_df = self.get_hist_data(symbol, 5000).dropna()
+        symbol_df = self.get_hist_data(symbol, 1000).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None
+            return None, None, None
         symbol_df.columns = [col.title() for col in symbol_df.columns]
         # Generate the signals based on the strategy rules
         symbol_df = self.generate_signal(symbol_df)
@@ -166,7 +166,7 @@ class MysteryOfTheMissingHeart:
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal
+        return atr, signal, symbol_df['signal']
     
     def close_positions(self, position):
         """ Function to close a specific position """
@@ -229,8 +229,10 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(login=mt_login_id, server=mt_server_name,password=mt_password)
 
+        # signals_df = pd.DataFrame()
         for symbol in self.symbols:
-            atr, signal = self.define_strategy(symbol)
+            atr, signal, _ = self.define_strategy(symbol)
+            # signals_df[f"{symbol}"] = signals
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
@@ -247,8 +249,12 @@ class MysteryOfTheMissingHeart:
                 lotsize = 0.1
             if symbol == "Volatility 10 Index":
                 lotsize = 0.30
-            if symbol == "Volatility 25 Index":
+            if symbol == "Volatility 25 Index" or symbol == "Volatility 100 Index":
                 lotsize = 0.50
+            if symbol == "Volatility 75 Index":
+                lotsize = 0.001
+            if symbol == "Volatility 50 Index":
+                lotsize = 4
             if signal==1:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
                 tp = round(tick.ask + (self.tp_factor * atr) + spread, 5)
@@ -257,9 +263,11 @@ class MysteryOfTheMissingHeart:
                 sl = round(tick.bid + (self.sl_factor * atr) + spread, 5)
                 tp = round(tick.bid - (self.tp_factor * atr) - spread, 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price=sl, tp_price=tp, lotsize=lotsize)
+        
+        # signals_df.to_csv("volatilitysignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["Volatility 10 Index"] #"Step Index",  "Volatility 25 Index"
+    symbols = ["Volatility 10 Index", "Step Index",  "Volatility 25 Index", "Volatility 50 Index", "Volatility 75 Index", "Volatility 100 Index"] 
     last_action_timestamp = 0
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols)
