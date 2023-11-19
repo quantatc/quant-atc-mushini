@@ -174,18 +174,18 @@ class MysteryOfTheMissingHeart:
     def execute_trades(self):
         # Initialize the connection if there is not
         client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
-        print("WTH is happening0")
+        # print("WTH is happening0")
 
         # signals_df = pd.DataFrame()
         for symbol in self.symbols:
-            print("WTH is happening1")
+            # print("WTH is happening1")
             atr, signal, _ = self.define_strategy(symbol)
             # signals_df[f"{symbol}"] = signals
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             
-            print("WTH is happening2")
+            # print("WTH is happening2")
 
             ticker = client.futures_symbol_ticker(symbol=symbol)
             price = float(ticker['price'])
@@ -194,7 +194,12 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Signal: {signal}')
             print(f'Symbol: {symbol}, Last Price: {price}, ATR: {atr}, Signal: {signal}')
 
-            if signal==0:
+            if symbol == "ETHUSDT":
+                self.units = 0.1
+            else:
+                self.units = 0.01
+
+            if signal==1:
                 sl = round(price - (self.sl_factor * atr), 2)
                 tp = round(price + (self.tp_factor * atr), 2)
                 # order = client.futures_create_order(symbol = self.symbol, side = "BUY", type = "MARKET", quantity = self.units)
@@ -206,7 +211,7 @@ class MysteryOfTheMissingHeart:
                 # order = client.futures_create_order(symbol = self.symbol, side = "SELL", type = "MARKET", quantity = self.units)
                 order = self.place_order(symbol, "SELL", "SHORT", self.units, sl, tp)
                 self.report_trade(order, "GOING SHORT")
-            if signal==1:
+            if signal==0:
                 print(f"Trading signal = {signal}: No trade Quant, trying again in 5 mins")
         
         # signals_df.to_csv("volatilitysignals_df.csv")
@@ -257,7 +262,7 @@ if __name__ == "__main__":
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 60:
+        if (current_timestamp - last_action_timestamp) >= 300:
             start_time = time.time()
             # Account Info
             print("_______________________________________________________________________________________________________")
