@@ -19,8 +19,8 @@ path = os.getenv("pathXM")
 #     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.5
+    sl_factor = 2
+    tp_factor = 2
 
     def __init__(self, symbols):
         self.symbols = symbols
@@ -47,7 +47,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M5): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M1): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 300:
+        if (current_timestamp - last_action_timestamp) >= 60:
             start_time = time.time()
             # Account Info
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
