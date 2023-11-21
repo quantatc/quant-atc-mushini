@@ -10,13 +10,13 @@ import pandas_ta as ta
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_idOANDA"))
-mt_password = os.getenv("mt_passwordOANDA")
-mt_server_name = os.getenv("mt_server_nameOANDA")
-path = os.getenv("pathOANDA")
+mt_login_id = int(os.getenv("mt_login_idXM"))
+mt_password = os.getenv("mt_passwordXM")
+mt_server_name = os.getenv("mt_server_nameXM")
+path = os.getenv("pathXM")
 
-if not mt_login_id or not mt_password or not mt_server_name or path:
-    raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
+# if not mt_login_id or not mt_password or not mt_server_name or path:
+#     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1
@@ -93,7 +93,7 @@ class MysteryOfTheMissingHeart:
             "magic": 199308,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_FOK,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         result = mt5.order_send(request)
         if result is None:
@@ -187,7 +187,7 @@ class MysteryOfTheMissingHeart:
             "magic": 199308,
             "comment": "correlation algo order",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_FOK,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         # Send a trading request
         result = mt5.order_send(request)
@@ -264,7 +264,7 @@ class MysteryOfTheMissingHeart:
         # signals_df.to_csv("volatilitysignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["US100", "GER30.sml", "US30", "GBPUSD.sml", "USDJPY.sml", "EURUSD.sml"] 
+    symbols = ["US100Cash", "GER40Cash", "US30Cash", "GBPUSD", "USDJPY", "EURUSD"] 
     last_action_timestamp = 0
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols)
@@ -278,7 +278,7 @@ if __name__ == "__main__":
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
                 print("_______________________________________________________________________________________________________")
-                print("OANDA LIVE ACCOUNT: MOTH SCALPING101 STRATEGY")
+                print("XM DEMO ACCOUNT: MOTH SCALPING101 STRATEGY")
                 print("_______________________________________________________________________________________________________")
                 print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 if current_account_info is not None:

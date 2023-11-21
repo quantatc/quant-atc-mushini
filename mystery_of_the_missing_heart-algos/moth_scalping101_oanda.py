@@ -15,8 +15,8 @@ mt_password = os.getenv("mt_passwordOANDA")
 mt_server_name = os.getenv("mt_server_nameOANDA")
 path = os.getenv("pathOANDA")
 
-if not mt_login_id or not mt_password or not mt_server_name or path:
-    raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
+# if not mt_login_id or not mt_password or not mt_server_name or path:
+#     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1

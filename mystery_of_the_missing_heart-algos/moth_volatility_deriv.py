@@ -10,17 +10,17 @@ import pandas_ta as ta
 
 load_dotenv()
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_idOANDA"))
-mt_password = os.getenv("mt_passwordOANDA")
-mt_server_name = os.getenv("mt_server_nameOANDA")
-path = os.getenv("pathOANDA")
+mt_login_id = int(os.getenv("mt_login_idDERIV"))
+mt_password = os.getenv("mt_passwordDERIV")
+mt_server_name = os.getenv("mt_server_nameDERIV")
+path = os.getenv("pathDERIV")
 
-if not mt_login_id or not mt_password or not mt_server_name or path:
-    raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
+# if not mt_login_id or not mt_password or not mt_server_name or path:
+#     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1
-    tp_factor = 1.5
+    tp_factor = 1
 
     def __init__(self, symbols):
         self.symbols = symbols
@@ -90,7 +90,7 @@ class MysteryOfTheMissingHeart:
             "sl": sl_price,
             "tp": tp_price,
             "deviation": deviation,
-            "magic": 199308,
+            "magic": 772473,
             "comment": "python script open",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_FOK,
@@ -184,10 +184,10 @@ class MysteryOfTheMissingHeart:
             "position": position.ticket,
             "price": tick.ask if position.type == mt5.ORDER_TYPE_BUY else tick.bid,
             "deviation": 20,
-            "magic": 199308,
+            "magic": 772473,
             "comment": "correlation algo order",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_FOK,
+            "type_filling": mt5.ORDER_FILLING_IOC,
         }
         # Send a trading request
         result = mt5.order_send(request)
@@ -199,6 +199,7 @@ class MysteryOfTheMissingHeart:
             print(f"Closed position: {position.symbol} ({position.volume} lots)")
     
     def close_all_positions(self):
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         """ Function to close all open positions """
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
         positions = mt5.positions_get()
@@ -247,11 +248,16 @@ class MysteryOfTheMissingHeart:
 
             spread = abs(tick.bid-tick.ask)
             
-            if symbol in self.symbols[:3]:
+            if symbol == "Step Index":
                 lotsize = 0.1
-            if symbol in self.symbols[3:]:
-                lotsize = 0.02
-
+            if symbol == "Volatility 10 Index":
+                lotsize = 0.30
+            if symbol == "Volatility 25 Index" or symbol == "Volatility 100 Index":
+                lotsize = 0.50
+            if symbol == "Volatility 75 Index":
+                lotsize = 0.001
+            if symbol == "Volatility 50 Index":
+                lotsize = 4
             if signal==1:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
                 tp = round(tick.ask + (self.tp_factor * atr) + spread, 5)
@@ -264,7 +270,7 @@ class MysteryOfTheMissingHeart:
         # signals_df.to_csv("volatilitysignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["US100", "GER30.sml", "US30", "GBPUSD.sml", "USDJPY.sml", "EURUSD.sml"] 
+    symbols = ["Volatility 10 Index", "Step Index",  "Volatility 25 Index", "Volatility 50 Index", "Volatility 75 Index", "Volatility 100 Index"] 
     last_action_timestamp = 0
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols)
@@ -278,7 +284,7 @@ if __name__ == "__main__":
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
                 current_account_info = mt5.account_info()
                 print("_______________________________________________________________________________________________________")
-                print("OANDA LIVE ACCOUNT: MOTH SCALPING101 STRATEGY")
+                print("DERIV DEMO ACCOUNT: MOMENTUM SCALPING STRATEGY")
                 print("_______________________________________________________________________________________________________")
                 print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 if current_account_info is not None:

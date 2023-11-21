@@ -14,13 +14,13 @@ import os
 load_dotenv()
 
 # Load environment variables
-mt_login_id = int(os.getenv("mt_login_id_xm"))
-mt_password = os.getenv("mt_password_xm")
-mt_server_name = os.getenv("mt_server_name_xm")
-mt5_path = os.getenv("path_xm")
+mt_login_id = int(os.getenv("mt_login_idXM"))
+mt_password = os.getenv("mt_passwordXM")
+mt_server_name = os.getenv("mt_server_nameXM")
+path = os.getenv("pathXM")
 
-if not mt_login_id or not mt_password or not mt_server_name:
-    raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
+# if not mt_login_id or not mt_password or not mt_server_name or path:
+#     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
     tp_pips = 3.00  #50 points profit target
@@ -32,7 +32,7 @@ class MysteryOfTheMissingHeart:
         self.order_result_comment = None
         self.pos_summary = None
         #self.Invested = None
-        if not mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password):
+        if not mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
             quit()
         for symbol in self.symbols:
@@ -42,7 +42,7 @@ class MysteryOfTheMissingHeart:
     def check_symbol(self, symbol):
         """Checks if a symbol is in the Market Watch. If it's not, the symbol is added."""
         # Initialize the connection if there is not
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         symbols = mt5.symbols_get()
         symbol_list = [s.name for s in symbols]
         if symbol not in symbol_list:
@@ -55,7 +55,7 @@ class MysteryOfTheMissingHeart:
     def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         try:
             #get data and convert it into pandas dataframe
             utc_from = datetime.now()
@@ -84,7 +84,7 @@ class MysteryOfTheMissingHeart:
         return usdx_yahoo
 
     def place_order(self, symbol, order_type, tp_price, sl_price=None):
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         #point = mt5.symbol_info(self.symbol).point
         #price = mt5.symbol_info_tick(self.symbol).last
         deviation = 20
@@ -126,7 +126,7 @@ class MysteryOfTheMissingHeart:
         return True
     
     def close_position(self, position):
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         order_type = mt5.ORDER_TYPE_SELL if position.type == mt5.ORDER_TYPE_BUY else mt5.ORDER_TYPE_BUY
         price = position.price_current
         request = {
@@ -148,7 +148,7 @@ class MysteryOfTheMissingHeart:
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         # Initialize the connection if there is not
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
         
         #usdx = self.get_hist_data("DX.f", 120).dropna()["close"].rename('usdx')
         try:
@@ -189,7 +189,7 @@ class MysteryOfTheMissingHeart:
     def check_position(self):
         """Checks the most recent position for each symbol and prints the count of long and short positions."""
         # Initialize the connection if it is not already initialized
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
 
         for symbol in self.symbols:
             positions = mt5.positions_get(symbol=symbol)
@@ -207,7 +207,7 @@ class MysteryOfTheMissingHeart:
         
     def execute_trades(self):
         # Initialize the connection if there is not
-        mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password)
+        mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password)
 
         for symbol in self.symbols:
             price, z_score = self.define_strategy(symbol)
@@ -267,7 +267,7 @@ if __name__ == "__main__":
                 if current_utc_weekday not in [5, 6]:
                     start_time = time_module.time()
                     # Account Info
-                    if mt5.initialize(path = mt5_path, login=mt_login_id, server=mt_server_name, password=mt_password):
+                    if mt5.initialize(path = path, login=mt_login_id, server=mt_server_name, password=mt_password):
                         current_account_info = mt5.account_info()
                         print("_______________________________________________________________________________________________________")
                         print("MOTH NAS100 SCALPER: XM LIVE ACCOUNT")
