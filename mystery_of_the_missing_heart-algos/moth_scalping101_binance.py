@@ -176,11 +176,11 @@ class MysteryOfTheMissingHeart:
         client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
         # print("WTH is happening0")
 
-        # signals_df = pd.DataFrame()
+        signals_df = pd.DataFrame()
         for symbol in self.symbols:
             # print("WTH is happening1")
-            atr, signal, _ = self.define_strategy(symbol)
-            # signals_df[f"{symbol}"] = signals
+            atr, signal, signals = self.define_strategy(symbol)
+            signals_df[f"{symbol}"] = signals
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
@@ -214,7 +214,7 @@ class MysteryOfTheMissingHeart:
             if signal==0:
                 print(f"Trading signal = {signal}: No trade Quant, trying again in 5 mins")
         
-        # signals_df.to_csv("cryptosignals_df.csv")
+        signals_df.to_csv("cryptosignals_df.csv")
     
     def report_trade(self, order, going): 
         # Initialize client
