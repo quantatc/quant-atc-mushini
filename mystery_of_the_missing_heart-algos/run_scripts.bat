@@ -1,10 +1,10 @@
 @echo off
-cd "C:\Users\ansto\anaconda3"
+cd "C:\Users\anstochibamu\anaconda3"
 
-start cmd /k "call scripts\activate.bat && python C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\mystery_of_the_missing_heart_XM2\moth_nas100.py"
+start cmd /k "call scripts\activate.bat && python C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos\moth_scalping101_xm.py"
 timeout /t 2
-start cmd /k "call scripts\activate.bat && python C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\mystery_of_the_missing_heart_Oanda\moth_scalping101.py"
+start cmd /k "call scripts\activate.bat && python C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos\moth_volatility_deriv.py"
 timeout /t 2
-start cmd /k "call scripts\activate.bat && python C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\mystery_of_the_missing_heart_Deriv\moth_volatility.py"
+start cmd /k "call scripts\activate.bat && python C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos\moth_scalping101_oanda.py"
 timeout /t 2
-start cmd /k "call scripts\activate.bat && python C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\crypto_scalping101_moth\moth-scalping101.py"
+start cmd /k "call scripts\activate.bat && python C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos\moth_scalping101_binance.py"
