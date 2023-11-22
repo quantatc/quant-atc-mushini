@@ -66,68 +66,80 @@ class MysteryOfTheMissingHeart:
         
         return df
     
-    def generate_signal(self, ohlc: pd.DataFrame) -> pd.DataFrame:
-        # Calculate William Fractals
-        ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
-        ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
-        # Calculate RSI 
-        ohlc["rsi"] = ta.rsi(ohlc.Close)
-        # Calculate EMAs 
-        ohlc["ema50"]   = ta.ema(ohlc.Close, length=50)
-        ohlc["ema21"]   = ta.ema(ohlc.Close, length=21)
-        ohlc["ema200"]  = ta.ema(ohlc.Close, length=200)
-        # Calculate the slopes of the EMAs 
-        rolling_period = 10
-        ohlc["slope_ema21"] = ohlc["ema21"].diff(periods=1)
-        ohlc["slope_ema50"] = ohlc["ema50"].diff(periods=1)
-        ohlc["slope_ema200"] = ohlc["ema200"].diff(periods=1)
-
-        ohlc["slope_ema21"] = ohlc["slope_ema21"].rolling(window=rolling_period).mean()
-        ohlc["slope_ema50"] = ohlc["slope_ema50"].rolling(window=rolling_period).mean()
-        ohlc["slope_ema200"] = ohlc["slope_ema200"].rolling(window=rolling_period).mean()
-        # Generate the ema signal
-        conditions = [
-            ( (ohlc['ema21']<ohlc['ema50']) & (ohlc['ema50']<ohlc['ema200']) & (ohlc['slope_ema21']<0) & (ohlc['slope_ema50']<0) & (ohlc['slope_ema200']<0) ),
-            ( (ohlc['ema21']>ohlc['ema50']) & (ohlc['ema50']>ohlc['ema200']) & (ohlc['slope_ema21']>0) & (ohlc['slope_ema50']>0) & (ohlc['slope_ema200']>0) )
-                ]
-        choices = [-1, 1]
-        ohlc['ema_signal'] = np.select(conditions, choices, default=0)
-        # Create the buy and sell signal
-        signal = [0]*len(ohlc)
-
-        for row in range(0, len(ohlc)):
-            signal[row] = 0
-            if ohlc.ema_signal[row]==-1 and ohlc.rsi[row] < 50 and ohlc.william_bearish[row] > 0 and ohlc.Close[row] < ohlc.ema21[row] and ohlc.Close[row] < ohlc.ema50[row] and ohlc.Close[row] < ohlc.ema200[row]:
-                signal[row]=-1
-
-            if ohlc.ema_signal[row]==1 and ohlc.rsi[row] > 50 and ohlc.william_bullish[row] > 0 and ohlc.Close[row] > ohlc.ema21[row] and ohlc.Close[row] > ohlc.ema50[row] and ohlc.Close[row] > ohlc.ema200[row]:
-                signal[row]=1   
-
-        ohlc['signal'] = signal
-
-        return ohlc 
-
     def define_strategy(self, symbol):
         """    strategy-specifics      """
+        # Initialize the connection if there is not
         
         symbol_df = self.get_hist_data(symbol, 2).dropna()
+        #convert timezone to UTC
+        try:
+            symbol_df.index = symbol_df.index.tz_localize('UTC')
+        except TypeError:
+            print("failed tz_localize, trying tz_convert")
+            symbol_df.index = symbol_df.index.tz_convert('UTC')
+
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None
-        # symbol_df.columns = [col.title() for col in symbol_df.columns]
-        # Generate the signals based on the strategy rules
-        symbol_df = self.generate_signal(symbol_df)
-
+            return None, None
+        symbol_df.columns = [col.title() for col in symbol_df.columns]
         #atr
-        atr_series = ta.atr(symbol_df['High'], symbol_df['Low'], symbol_df['Close'], length=self.atr_period)
+        atr_series = ta.atr(symbol_df['High'], symbol_df['Low'], symbol_df['Close'], length=16)
         atr = atr_series.values[-1]
-        
-        #signal
-        signal = symbol_df['signal'].values[-1]
+
+        # Generate the signals based on the strategy rules
+        def generate_signal(ohlc: pd.DataFrame) -> pd.DataFrame:
+            # Calculate William Fractals
+            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
+            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
+            
+            # Calculate RSI 
+            ohlc["rsi"] = ta.rsi(ohlc.Close)
+
+            # Calculate EMAs 
+            ohlc["ema50"]   = ta.ema(ohlc.Close, length=50)
+            ohlc["ema21"]   = ta.ema(ohlc.Close, length=21)
+            ohlc["ema200"]  = ta.ema(ohlc.Close, length=200)
+            # Calculate the slopes of the EMAs 
+            rolling_period = 10
+            ohlc["slope_ema21"] = ohlc["ema21"].diff(periods=1)
+            ohlc["slope_ema50"] = ohlc["ema50"].diff(periods=1)
+            ohlc["slope_ema200"] = ohlc["ema200"].diff(periods=1)
+            ohlc["slope_ema21"] = ohlc["slope_ema21"].rolling(window=rolling_period).mean()
+            ohlc["slope_ema50"] = ohlc["slope_ema50"].rolling(window=rolling_period).mean()
+            ohlc["slope_ema200"] = ohlc["slope_ema200"].rolling(window=rolling_period).mean()
+
+            # Generate the ema signal
+            conditions = [
+                ( (ohlc['ema21']<ohlc['ema50']) & (ohlc['ema50']<ohlc['ema200']) & (ohlc['slope_ema21']<0) & (ohlc['slope_ema50']<0) & (ohlc['slope_ema200']<0) ),
+                ( (ohlc['ema21']>ohlc['ema50']) & (ohlc['ema50']>ohlc['ema200']) & (ohlc['slope_ema21']>0) & (ohlc['slope_ema50']>0) & (ohlc['slope_ema200']>0) )
+                    ]
+            choices = [1, 2]
+            ohlc['ema_signal'] = np.select(conditions, choices, default=0)
+
+            # Create the buy and sell signal
+            signal = [0]*len(ohlc)
+
+            for row in range(0, len(ohlc)):
+                signal[row] = 0
+                if ohlc.ema_signal[row]==1 and ohlc.rsi[row] < 50 and ohlc.william_bearish[row] > 0 and ohlc.Close[row] < ohlc.ema21[row] and ohlc.Close[row] < ohlc.ema50[row] and ohlc.Close[row] < ohlc.ema200[row]:
+                    signal[row]=1
+
+                if ohlc.ema_signal[row]==2 and ohlc.rsi[row] > 50 and ohlc.william_bullish[row] > 0 and ohlc.Close[row] > ohlc.ema21[row] and ohlc.Close[row] > ohlc.ema50[row] and ohlc.Close[row] > ohlc.ema200[row]:
+                    signal[row]=2   
+
+            ohlc['signal'] = signal
+
+            return ohlc 
+
+        signals_df = generate_signal(symbol_df)
+        # print(signals_df.Close.values[-20:])
+        # print(signals_df.signal.values[-20:])
+        signal_value = signals_df.signal.values[-5]
+        # symbol_df['signal'] = signal
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, symbol_df['signal']
+        return atr, signal_value
 
     def place_order(self, symbol, side, position, units, stop_loss, take_profit):
         """
@@ -176,11 +188,9 @@ class MysteryOfTheMissingHeart:
         client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
         # print("WTH is happening0")
 
-        signals_df = pd.DataFrame()
         for symbol in self.symbols:
             # print("WTH is happening1")
-            atr, signal, signals = self.define_strategy(symbol)
-            signals_df[f"{symbol}"] = signals
+            atr, signal = self.define_strategy(symbol)
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
@@ -199,13 +209,13 @@ class MysteryOfTheMissingHeart:
             else:
                 self.units = 0.01
 
-            if signal==1:
+            if signal==2:
                 sl = round(price - (self.sl_factor * atr), 2)
                 tp = round(price + (self.tp_factor * atr), 2)
                 # order = client.futures_create_order(symbol = self.symbol, side = "BUY", type = "MARKET", quantity = self.units)
                 order = self.place_order(symbol, "BUY", "LONG", self.units, sl, tp)
                 self.report_trade(order, "GOING LONG") 
-            if signal==-1:
+            if signal==1:
                 sl = round(price + (self.sl_factor * atr), 2)
                 tp = round(price - (self.tp_factor * atr), 2)
                 # order = client.futures_create_order(symbol = self.symbol, side = "SELL", type = "MARKET", quantity = self.units)
@@ -214,7 +224,6 @@ class MysteryOfTheMissingHeart:
             if signal==0:
                 print(f"Trading signal = {signal}: No trade Quant, trying again in 5 mins")
         
-        signals_df.to_csv("cryptosignals_df.csv")
     
     def report_trade(self, order, going): 
         # Initialize client
