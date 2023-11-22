@@ -19,8 +19,8 @@ path = os.getenv("pathDERIV")
 #     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1
+    sl_factor = 2
+    tp_factor = 2
 
     def __init__(self, symbols):
         self.symbols = symbols
