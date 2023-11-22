@@ -222,11 +222,11 @@ class MysteryOfTheMissingHeart:
         # Initialize the connection if there is not
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
 
-        signals_df = pd.DataFrame()
+        # signals_df = pd.DataFrame()
         for symbol in self.symbols:
             atr, signals = self.define_strategy(symbol)
-            signal = signals.iloc[-1]
-            signals_df[f"{symbol}"] = signals
+            signal = signals.iloc[-2]
+            # signals_df[f"{symbol}"] = signals
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
@@ -253,7 +253,7 @@ class MysteryOfTheMissingHeart:
                 tp = round(tick.bid - (self.tp_factor * atr) - spread, 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price=sl, tp_price=tp, lotsize=lotsize)
         
-        signals_df.to_csv("fxcfdsignals_df.csv")
+        # signals_df.to_csv("fxcfdsignals_df.csv")
 
 if __name__ == "__main__":
     symbols = ["US100Cash", "GER40Cash", "US30Cash", "GBPUSD", "USDJPY", "EURUSD"] 
