@@ -7,8 +7,8 @@ def run_script(script_name, env_path):
     load_dotenv(dotenv_path=env_path)
     os.system(f"python {script_name}")
 
-env_path = r"C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\mystery_of_the_missing_heart-algos\.env"
-directory = r"C:\Users\ansto\Documents\anstolytics-research\quant-atc-mushini\quant-atc-mushini\mystery_of_the_missing_heart-algos"
+env_path = r"C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos\.env"
+directory = r"C:\Users\anstochibamu\Documents\GitHub\quant-atc-mushini\mystery_of_the_missing_heart-algos"
 
 # Create threads for each script
 thread1 = threading.Thread(target=run_script, args=(directory + r"\moth_scalping101_xm.py", env_path))
@@ -18,13 +18,13 @@ thread4 = threading.Thread(target=run_script, args=(directory + r"\moth_scalping
 
 # Start threads
 thread1.start()
-time.sleep(10)  # Delay to prevent clashes
+time.sleep(3)  # Delay to prevent clashes
 thread2.start()
 
-time.sleep(10)
+time.sleep(3)
 thread3.start()
 
-time.sleep(10)  # Delay to prevent clashes
+time.sleep(3)  # Delay to prevent clashes
 thread4.start()
 
 # Join threads
