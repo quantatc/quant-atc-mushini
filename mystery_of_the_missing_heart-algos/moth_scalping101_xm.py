@@ -24,8 +24,6 @@ class MysteryOfTheMissingHeart:
 
     def __init__(self, symbols):
         self.symbols = symbols
-        self.order_result_comment = None
-        self.pos_summary = None
         #self.Invested = None
         if not mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
@@ -104,47 +102,6 @@ class MysteryOfTheMissingHeart:
             return False
         logging.info(f'Order placed successfully: {result}')
         return True
-    
-    def generate_signal(self, ohlc: pd.DataFrame) -> pd.DataFrame:
-        # Calculate William Fractals
-        ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
-        ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
-        # Calculate RSI 
-        ohlc["rsi"] = ta.rsi(ohlc.Close)
-        # Calculate EMAs 
-        ohlc["ema50"]   = ta.ema(ohlc.Close, length=50)
-        ohlc["ema21"]   = ta.ema(ohlc.Close, length=21)
-        ohlc["ema200"]  = ta.ema(ohlc.Close, length=200)
-        # Calculate the slopes of the EMAs 
-        rolling_period = 10
-        ohlc["slope_ema21"] = ohlc["ema21"].diff(periods=1)
-        ohlc["slope_ema50"] = ohlc["ema50"].diff(periods=1)
-        ohlc["slope_ema200"] = ohlc["ema200"].diff(periods=1)
-
-        ohlc["slope_ema21"] = ohlc["slope_ema21"].rolling(window=rolling_period).mean()
-        ohlc["slope_ema50"] = ohlc["slope_ema50"].rolling(window=rolling_period).mean()
-        ohlc["slope_ema200"] = ohlc["slope_ema200"].rolling(window=rolling_period).mean()
-        # Generate the ema signal
-        conditions = [
-            ( (ohlc['ema21']<ohlc['ema50']) & (ohlc['ema50']<ohlc['ema200']) & (ohlc['slope_ema21']<0) & (ohlc['slope_ema50']<0) & (ohlc['slope_ema200']<0) ),
-            ( (ohlc['ema21']>ohlc['ema50']) & (ohlc['ema50']>ohlc['ema200']) & (ohlc['slope_ema21']>0) & (ohlc['slope_ema50']>0) & (ohlc['slope_ema200']>0) )
-                ]
-        choices = [-1, 1]
-        ohlc['ema_signal'] = np.select(conditions, choices, default=0)
-        # Create the buy and sell signal
-        signal = [0]*len(ohlc)
-
-        for row in range(0, len(ohlc)):
-            signal[row] = 0
-            if ohlc.ema_signal[row]==-1 and ohlc.rsi[row] < 50 and ohlc.william_bearish[row] > 0 and ohlc.Close[row] < ohlc.ema21[row] and ohlc.Close[row] < ohlc.ema50[row] and ohlc.Close[row] < ohlc.ema200[row]:
-                signal[row]=-1
-
-            if ohlc.ema_signal[row]==1 and ohlc.rsi[row] > 50 and ohlc.william_bullish[row] > 0 and ohlc.Close[row] > ohlc.ema21[row] and ohlc.Close[row] > ohlc.ema50[row] and ohlc.Close[row] > ohlc.ema200[row]:
-                signal[row]=1   
-
-        ohlc['signal'] = signal
-
-        return ohlc 
 
     def define_strategy(self, symbol):
         """    strategy-specifics      """
@@ -154,21 +111,55 @@ class MysteryOfTheMissingHeart:
         symbol_df = self.get_hist_data(symbol, 500).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
-            return None, None, None
+            return None, None
         symbol_df.columns = [col.title() for col in symbol_df.columns]
         # Generate the signals based on the strategy rules
-        symbol_df = self.generate_signal(symbol_df)
+        # symbol_df = self.generate_signal(symbol_df)
+        # Calculate William Fractals
+        symbol_df["william_bearish"] =  np.where(symbol_df["High"] == symbol_df["High"].rolling(9, center=True).max(), symbol_df["High"], np.nan)
+        symbol_df["william_bullish"] =  np.where(symbol_df["Low"] == symbol_df["Low"].rolling(9, center=True).min(), symbol_df["Low"], np.nan)
+        # Calculate RSI 
+        symbol_df["rsi"] = ta.rsi(symbol_df.Close)
+        # Calculate EMAs 
+        symbol_df["ema50"]   = ta.ema(symbol_df.Close, length=50)
+        symbol_df["ema21"]   = ta.ema(symbol_df.Close, length=21)
+        symbol_df["ema200"]  = ta.ema(symbol_df.Close, length=200)
+        # Calculate the slopes of the EMAs 
+        rolling_period = 10
+        symbol_df["slope_ema21"] = symbol_df["ema21"].diff(periods=1)
+        symbol_df["slope_ema50"] = symbol_df["ema50"].diff(periods=1)
+        symbol_df["slope_ema200"] = symbol_df["ema200"].diff(periods=1)
+
+        symbol_df["slope_ema21"] = symbol_df["slope_ema21"].rolling(window=rolling_period).mean()
+        symbol_df["slope_ema50"] = symbol_df["slope_ema50"].rolling(window=rolling_period).mean()
+        symbol_df["slope_ema200"] = symbol_df["slope_ema200"].rolling(window=rolling_period).mean()
+        # Generate the ema signal
+        conditions = [
+            ( (symbol_df['ema21']<symbol_df['ema50']) & (symbol_df['ema50']<symbol_df['ema200']) & (symbol_df['slope_ema21']<0) & (symbol_df['slope_ema50']<0) & (symbol_df['slope_ema200']<0) ),
+            ( (symbol_df['ema21']>symbol_df['ema50']) & (symbol_df['ema50']>symbol_df['ema200']) & (symbol_df['slope_ema21']>0) & (symbol_df['slope_ema50']>0) & (symbol_df['slope_ema200']>0) )
+                ]
+        choices = [-1, 1]
+        symbol_df['ema_signal'] = np.select(conditions, choices, default=0)
+        # Create the buy and sell signal
+        signal = [0]*len(symbol_df)
+
+        for row in range(0, len(symbol_df)):
+            signal[row] = 0
+            if symbol_df.ema_signal[row]==-1 and symbol_df.rsi[row] < 50 and symbol_df.william_bearish[row] > 0 and symbol_df.Close[row] < symbol_df.ema21[row] and symbol_df.Close[row] < symbol_df.ema50[row] and symbol_df.Close[row] < symbol_df.ema200[row]:
+                signal[row]=-1
+
+            if symbol_df.ema_signal[row]==1 and symbol_df.rsi[row] > 50 and symbol_df.william_bullish[row] > 0 and symbol_df.Close[row] > symbol_df.ema21[row] and symbol_df.Close[row] > symbol_df.ema50[row] and symbol_df.Close[row] > symbol_df.ema200[row]:
+                signal[row]=1   
+
+        symbol_df['signal'] = signal
 
         #atr
         atr_series = ta.atr(symbol_df['High'], symbol_df['Low'], symbol_df['Close'], length=16)
         atr = atr_series.values[-1]
-        
-        #signal
-        signal = symbol_df['signal'].values[-1]
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, signal, symbol_df['signal']
+        return atr, symbol_df['signal']
     
     def close_positions(self, position):
         """ Function to close a specific position """
@@ -233,7 +224,8 @@ class MysteryOfTheMissingHeart:
 
         # signals_df = pd.DataFrame()
         for symbol in self.symbols:
-            atr, signal, _ = self.define_strategy(symbol)
+            atr, signals = self.define_strategy(symbol)
+            signal = signals.iloc[-1]
             # signals_df[f"{symbol}"] = signals
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
@@ -261,7 +253,7 @@ class MysteryOfTheMissingHeart:
                 tp = round(tick.bid - (self.tp_factor * atr) - spread, 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price=sl, tp_price=tp, lotsize=lotsize)
         
-        # signals_df.to_csv("volatilitysignals_df.csv")
+        # signals_df.to_csv("fxcfdsignals_df.csv")
 
 if __name__ == "__main__":
     symbols = ["US100Cash", "GER40Cash", "US30Cash", "GBPUSD", "USDJPY", "EURUSD"] 
