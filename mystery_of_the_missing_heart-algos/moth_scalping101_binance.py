@@ -110,7 +110,7 @@ class MysteryOfTheMissingHeart:
     def define_strategy(self, symbol):
         """    strategy-specifics      """
         
-        symbol_df = self.get_hist_data(symbol, 5).dropna()
+        symbol_df = self.get_hist_data(symbol, 2).dropna()
         if symbol_df.empty:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None, None
@@ -214,7 +214,7 @@ class MysteryOfTheMissingHeart:
             if signal==0:
                 print(f"Trading signal = {signal}: No trade Quant, trying again in 5 mins")
         
-        # signals_df.to_csv("volatilitysignals_df.csv")
+        # signals_df.to_csv("cryptosignals_df.csv")
     
     def report_trade(self, order, going): 
         # Initialize client
