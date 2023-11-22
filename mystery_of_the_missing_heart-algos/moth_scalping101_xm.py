@@ -227,6 +227,7 @@ class MysteryOfTheMissingHeart:
             atr, signals = self.define_strategy(symbol)
             signal = signals.iloc[-2]
             # signals_df[f"{symbol}"] = signals
+            print(signals.tail(50))
             if atr is None or signal is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
@@ -244,11 +245,11 @@ class MysteryOfTheMissingHeart:
             if symbol in self.symbols[3:]:
                 lotsize = 0.02
 
-            if signal==1:
+            if signal == 1:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
                 tp = round(tick.ask + (self.tp_factor * atr) + spread, 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price=sl, tp_price=tp, lotsize=lotsize)
-            if signal==-1:
+            if signal == -1:
                 sl = round(tick.bid + (self.sl_factor * atr) + spread, 5)
                 tp = round(tick.bid - (self.tp_factor * atr) - spread, 5)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price=sl, tp_price=tp, lotsize=lotsize)
