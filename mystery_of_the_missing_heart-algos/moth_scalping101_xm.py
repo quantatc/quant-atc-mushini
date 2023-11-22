@@ -113,6 +113,10 @@ class MysteryOfTheMissingHeart:
             print(f"Error: Historical data for symbol '{symbol}' is not available.")
             return None, None
         symbol_df.columns = [col.title() for col in symbol_df.columns]
+        #atr
+        atr_series = ta.atr(symbol_df['High'], symbol_df['Low'], symbol_df['Close'], length=16)
+        atr = atr_series.values[-1]
+
         # Generate the signals based on the strategy rules
         # symbol_df = self.generate_signal(symbol_df)
         # Calculate William Fractals
@@ -151,15 +155,13 @@ class MysteryOfTheMissingHeart:
             if symbol_df.ema_signal[row]==1 and symbol_df.rsi[row] > 50 and symbol_df.william_bullish[row] > 0 and symbol_df.Close[row] > symbol_df.ema21[row] and symbol_df.Close[row] > symbol_df.ema50[row] and symbol_df.Close[row] > symbol_df.ema200[row]:
                 signal[row]=1   
 
-        symbol_df['signal'] = signal
-
-        #atr
-        atr_series = ta.atr(symbol_df['High'], symbol_df['Low'], symbol_df['Close'], length=16)
-        atr = atr_series.values[-1]
+        print(signal[-20:])
+        signal_value = signal[-1]
+        # symbol_df['signal'] = signal
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
-        return atr, symbol_df['signal']
+        return atr, signal_value
     
     def close_positions(self, position):
         """ Function to close a specific position """
@@ -224,11 +226,11 @@ class MysteryOfTheMissingHeart:
 
         # signals_df = pd.DataFrame()
         for symbol in self.symbols:
-            atr, signals = self.define_strategy(symbol)
-            signal = signals.iloc[-2]
+            atr, signal = self.define_strategy(symbol)
+            # signal = signals.iloc[-2]
             # signals_df[f"{symbol}"] = signals
-            print(signals.tail(50))
-            if atr is None or signal is None:
+            # print(signals.tail(50))
+            if atr is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
