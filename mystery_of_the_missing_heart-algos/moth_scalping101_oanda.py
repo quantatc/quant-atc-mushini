@@ -258,9 +258,9 @@ class MysteryOfTheMissingHeart:
             spread = abs(tick.bid-tick.ask)
             
             if symbol in self.symbols[:3]:
-                lotsize = 0.1
+                lotsize = 1.0
             if symbol in self.symbols[3:]:
-                lotsize = 0.02
+                lotsize = 0.2
 
             if signal==2:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
