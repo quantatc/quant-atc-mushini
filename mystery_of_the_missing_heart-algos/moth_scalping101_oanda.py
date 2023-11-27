@@ -22,10 +22,9 @@ class MysteryOfTheMissingHeart:
     sl_factor = 1
     tp_factor = 1.5
 
-    def __init__(self, symbols):
+    def __init__(self, symbols, risk_pct):
         self.symbols = symbols
-        self.order_result_comment = None
-        self.pos_summary = None
+        self.risk_pct = risk_pct
         #self.Invested = None
         if not mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
             print("initialize() failed, error code =",mt5.last_error())
@@ -47,7 +46,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M5): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
@@ -129,8 +128,8 @@ class MysteryOfTheMissingHeart:
         # Generate the signals based on the strategy rules
         def generate_signal(ohlc: pd.DataFrame) -> pd.DataFrame:
             # Calculate William Fractals
-            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
-            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
+            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(3, center=True).max(), ohlc["High"], np.nan)
+            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(3, center=True).min(), ohlc["Low"], np.nan)
             
             # Calculate RSI 
             ohlc["rsi"] = ta.rsi(ohlc.Close)
@@ -174,7 +173,7 @@ class MysteryOfTheMissingHeart:
         signals_df = generate_signal(symbol_df)
         # print(signals_df.Close.values[-20:])
         print(signals_df.signal.values[-10:])
-        signal_value = signals_df.signal.values[-5]
+        signal_value = signals_df.signal.values[-2]
 
         #logging plus debugging
         #print(f"Signals:   {symbol_df['Signal'].tail()}")
@@ -244,8 +243,10 @@ class MysteryOfTheMissingHeart:
         # signals_df = pd.DataFrame()
         for symbol in self.symbols:
             atr, signal = self.define_strategy(symbol)
+            # signal = signals.iloc[-2]
             # signals_df[f"{symbol}"] = signals
-            if atr is None or signal is None:
+            # print(signals.tail(50))
+            if atr is None:
                 print(f"Skipping symbol '{symbol}' due to missing strategy data.")
                 continue
             tick = mt5.symbol_info_tick(symbol)
@@ -254,35 +255,52 @@ class MysteryOfTheMissingHeart:
             #self.Invested = self.check_position(symbol)
             logging.info(f'Symbol: {symbol}, Last Price:   {tick.ask}, ATR: {atr}, Signal: {signal}')
             print(f'Symbol: {symbol}, Last Price: {tick.ask}, ATR: {atr}, Signal: {signal}')
+            positions = mt5.positions_get(symbol=symbol)
+            if positions is None:
+                long_positions = 0
+                short_positions = 0
+            else:
+                long_positions = sum(position.type == mt5.ORDER_TYPE_BUY for position in positions)
+                short_positions = sum(position.type == mt5.ORDER_TYPE_SELL for position in positions)
 
+            # def calculate_lot_size():
+            symbol_info = mt5.symbol_info(symbol)
+            current_account_info = mt5.account_info()
+            risk_capital = float(current_account_info.equity) * (self.risk_pct)
             spread = abs(tick.bid-tick.ask)
             
             if symbol in self.symbols[:3]:
-                lotsize = 1.0
+                min_quantity = 0.10
             if symbol in self.symbols[3:]:
-                lotsize = 0.2
+                min_quantity = 0.01
 
-            if signal==2:
+            if signal == 2 and long_positions==0:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
                 tp = round(tick.ask + (self.tp_factor * atr) + spread, 5)
+                risk_ticks = (tick.ask - sl) / symbol_info.trade_tick_size
+                lotsize = max(min_quantity, round(risk_capital / (risk_ticks * symbol_info.trade_tick_value), 2))
+                print("Lot size", lotsize)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_BUY, sl_price=sl, tp_price=tp, lotsize=lotsize)
-            if signal==1:
+            if signal == 1 and short_positions==0:
                 sl = round(tick.bid + (self.sl_factor * atr) + spread, 5)
                 tp = round(tick.bid - (self.tp_factor * atr) - spread, 5)
+                risk_ticks = (tick.ask - sl) / symbol_info.trade_tick_size
+                lotsize = max(min_quantity, round(risk_capital / (risk_ticks * symbol_info.trade_tick_value), 2))
+                print("Lot size", lotsize)
                 self.place_order(symbol=symbol, order_type=mt5.ORDER_TYPE_SELL, sl_price=sl, tp_price=tp, lotsize=lotsize)
         
         # signals_df.to_csv("volatilitysignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["US100", "GER30.sml", "US30", "GBPUSD.sml", "USDJPY.sml", "EURUSD.sml"] 
+    symbols = ["US100", "GER30.sml", "US30","USDJPY.sml"] # "GBPUSD.sml", "EURUSD.sml"
     last_action_timestamp = 0
     last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols)
+    trader = MysteryOfTheMissingHeart(symbols, 0.05)
     while True:
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 300:
+        if (current_timestamp - last_action_timestamp) >= 900:
             start_time = time.time()
             # Account Info
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):

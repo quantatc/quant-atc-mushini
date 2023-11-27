@@ -19,7 +19,7 @@ path = os.getenv("pathDERIV")
 #     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 2
+    sl_factor = 1.5
     tp_factor = 2
 
     def __init__(self, symbols):
@@ -47,7 +47,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M5): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
@@ -129,8 +129,8 @@ class MysteryOfTheMissingHeart:
         # Generate the signals based on the strategy rules
         def generate_signal(ohlc: pd.DataFrame) -> pd.DataFrame:
             # Calculate William Fractals
-            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
-            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
+            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(3, center=True).max(), ohlc["High"], np.nan)
+            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(3, center=True).min(), ohlc["Low"], np.nan)
             
             # Calculate RSI 
             ohlc["rsi"] = ta.rsi(ohlc.Close)
@@ -174,7 +174,7 @@ class MysteryOfTheMissingHeart:
         signals_df = generate_signal(symbol_df)
         # print(signals_df.Close.values[-20:])
         print(signals_df.signal.values[-10:])
-        signal_value = signals_df.signal.values[-5]
+        signal_value = signals_df.signal.values[-2]
         # symbol_df['signal'] = signal
 
         #logging plus debugging
@@ -289,7 +289,7 @@ if __name__ == "__main__":
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 300:
+        if (current_timestamp - last_action_timestamp) >= 900:
             start_time = time.time()
             # Account Info
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):

@@ -16,18 +16,19 @@ secret_key = os.getenv("secret_key")
 
 # if not api_key or not secret_key:
 #     raise ValueError("Please set the environment variables api_key, secret_key")
+client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
 
 class MysteryOfTheMissingHeart:
     sl_factor = 1
-    tp_factor = 1
+    tp_factor = 1.5
 
-    def __init__(self, symbols, units, leverage = 5):
+    def __init__(self, symbols, risk_pct, leverage = 5):
         #Initialize client request
-        client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
+        # client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
 
         self.symbols = symbols
         self.available_intervals = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
-        self.units = units
+        self.risk_pct = risk_pct
         self.leverage = leverage 
         self.cum_profits = 0
 
@@ -42,7 +43,7 @@ class MysteryOfTheMissingHeart:
         #************************************************************************
 
 
-    def get_hist_data(self, symbol, days, interval="5m"): #changed timeframe
+    def get_hist_data(self, symbol, days, interval="15m"): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
@@ -70,7 +71,7 @@ class MysteryOfTheMissingHeart:
         """    strategy-specifics      """
         # Initialize the connection if there is not
         
-        symbol_df = self.get_hist_data(symbol, 2).dropna()
+        symbol_df = self.get_hist_data(symbol, 4).dropna()
         #convert timezone to UTC
         try:
             symbol_df.index = symbol_df.index.tz_localize('UTC')
@@ -89,8 +90,8 @@ class MysteryOfTheMissingHeart:
         # Generate the signals based on the strategy rules
         def generate_signal(ohlc: pd.DataFrame) -> pd.DataFrame:
             # Calculate William Fractals
-            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(9, center=True).max(), ohlc["High"], np.nan)
-            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(9, center=True).min(), ohlc["Low"], np.nan)
+            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(3, center=True).max(), ohlc["High"], np.nan)
+            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(3, center=True).min(), ohlc["Low"], np.nan)
             
             # Calculate RSI 
             ohlc["rsi"] = ta.rsi(ohlc.Close)
@@ -133,8 +134,8 @@ class MysteryOfTheMissingHeart:
 
         signals_df = generate_signal(symbol_df)
         # print(signals_df.Close.values[-20:])
-        # print(signals_df.signal.values[-20:])
-        signal_value = signals_df.signal.values[-5]
+        print(signals_df.signal.values[-10:])
+        signal_value = signals_df.signal.values[-2]
         # symbol_df['signal'] = signal
 
         #logging plus debugging
@@ -146,7 +147,7 @@ class MysteryOfTheMissingHeart:
         Places a market order on Binance Futures with a stop loss and take profit.
         """
         # Initialize the client
-        client = Client(api_key=api_key, api_secret=secret_key, tld="com", testnet=True)
+        # client = Client(api_key=api_key, api_secret=secret_key, tld="com", testnet=True)
         try:
             # Place the market order
             order = client.futures_create_order(
@@ -185,7 +186,7 @@ class MysteryOfTheMissingHeart:
 
     def execute_trades(self):
         # Initialize the connection if there is not
-        client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
+        # client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
         # print("WTH is happening0")
 
         for symbol in self.symbols:
@@ -204,30 +205,46 @@ class MysteryOfTheMissingHeart:
             logging.info(f'Symbol: {symbol}, Last Price:   {price}, ATR: {atr}, Signal: {signal}')
             print(f'Symbol: {symbol}, Last Price: {price}, ATR: {atr}, Signal: {signal}')
 
-            if symbol == "ETHUSDT":
-                self.units = 0.1
-            else:
-                self.units = 0.01
+            if signal==0:
+                print(f"Trading signal = {signal}: No trade Quant, trying again in 15 mins")
+                continue
+            
+            # Fetch the exchange info to get the symbol details
+            exchange_info = client.futures_exchange_info()
+            symbol_info = next(item for item in exchange_info['symbols'] if item['symbol'] == symbol)
+            # Extract relevant parameters
+            min_notional = float(symbol_info['filters'][5]['notional'])
+            # decimal_points = len(str(step_size.split(".")[1]))
+            decimal_points = int(symbol_info['quantityPrecision'])
+            price_precision = int(symbol_info['pricePrecision'])
+            margin = float(symbol_info['requiredMarginPercent'])
+            # Fetch account information to get equity
+            account_info = client.futures_account_balance()
+            equity = float(next(item for item in account_info if item['asset'] == 'USDT')['balance'])
+
 
             if signal==2:
-                sl = round(price - (self.sl_factor * atr), 2)
-                tp = round(price + (self.tp_factor * atr), 2)
-                # order = client.futures_create_order(symbol = self.symbol, side = "BUY", type = "MARKET", quantity = self.units)
+                sl = round(price - (self.sl_factor * atr), price_precision)
+                tp = round(price + (self.tp_factor * atr), price_precision)
+                position_size = (self.risk_pct * equity) / (price - sl)
+                self.units = max(round(min_notional / price, decimal_points), round(position_size/margin, decimal_points))
+                print(f"Quanity: {self.units}")
                 order = self.place_order(symbol, "BUY", "LONG", self.units, sl, tp)
                 self.report_trade(order, "GOING LONG") 
             if signal==1:
-                sl = round(price + (self.sl_factor * atr), 2)
-                tp = round(price - (self.tp_factor * atr), 2)
-                # order = client.futures_create_order(symbol = self.symbol, side = "SELL", type = "MARKET", quantity = self.units)
+                sl = round(price + (self.sl_factor * atr), price_precision)
+                tp = round(price - (self.tp_factor * atr), price_precision)
+                position_size = (self.risk_pct * equity) / (price - sl)
+                self.units = max(round(min_notional / price, decimal_points), round(position_size/margin, decimal_points))
+                print(f"Quanity: {self.units}")
                 order = self.place_order(symbol, "SELL", "SHORT", self.units, sl, tp)
                 self.report_trade(order, "GOING SHORT")
-            if signal==0:
-                print(f"Trading signal = {signal}: No trade Quant, trying again in 5 mins")
+
         
     
     def report_trade(self, order, going): 
         # Initialize client
-        client = Client(api_key=api_key, api_secret=secret_key, tld="com", testnet=True)
+        # client = Client(api_key=api_key, api_secret=secret_key, tld="com", testnet=True)
 
         if order is not None:
             for symbol in self.symbols:
@@ -263,15 +280,15 @@ class MysteryOfTheMissingHeart:
                 print(100 * "-" + "\n")
 
 if __name__ == "__main__":
-    symbols = ["BTCUSDT", "ETHUSDT"] 
+    symbols = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "XRPUSDT"] 
     last_action_timestamp = 0
     last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols, units=0.01, leverage=5)
+    trader = MysteryOfTheMissingHeart(symbols, risk_pct=0.02, leverage=5)
     while True:
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 300:
+        if (current_timestamp - last_action_timestamp) >= 900:
             start_time = time.time()
             # Account Info
             print("_______________________________________________________________________________________________________")
