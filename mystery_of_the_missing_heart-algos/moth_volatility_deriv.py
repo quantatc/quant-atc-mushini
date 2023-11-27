@@ -268,7 +268,7 @@ class MysteryOfTheMissingHeart:
             if symbol == "Volatility 75 Index":
                 lotsize = 0.001
             if symbol == "Volatility 50 Index":
-                lotsize = 4
+                lotsize = 4.00
             if signal==2:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
                 tp = round(tick.ask + (self.tp_factor * atr) + spread, 5)
