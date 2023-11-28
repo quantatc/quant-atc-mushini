@@ -270,9 +270,9 @@ class MysteryOfTheMissingHeart:
             risk_capital = float(current_account_info.equity) * (self.risk_pct)
             spread = abs(tick.bid-tick.ask)
             
-            if symbol in self.symbols[:3]:
-                min_quantity = 0.10
-            if symbol in self.symbols[3:]:
+            # if symbol in self.symbols[:3]:
+            #     min_quantity = 0.10
+            if symbol in self.symbols:
                 min_quantity = 0.01
 
             if signal == 2 and long_positions==0:
@@ -293,10 +293,10 @@ class MysteryOfTheMissingHeart:
         # signals_df.to_csv("fxcfdsignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["US100Cash", "GER40Cash", "US30Cash", "GBPUSD", "USDJPY", "EURUSD"] #
+    symbols = ["GBPUSD", "USDJPY", "EURUSD"] #"US100Cash", "GER40Cash", "US30Cash", 
     last_action_timestamp = 0
     last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols, 0.1)
+    trader = MysteryOfTheMissingHeart(symbols, 0.02)
     while True:
         current_time = datetime.now()
         # Launch the algorithm

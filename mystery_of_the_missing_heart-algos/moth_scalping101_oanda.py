@@ -19,7 +19,7 @@ path = os.getenv("pathOANDA")
 #     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
+    sl_factor = 2
     tp_factor = 1.5
 
     def __init__(self, symbols, risk_pct):
@@ -269,10 +269,10 @@ class MysteryOfTheMissingHeart:
             risk_capital = float(current_account_info.equity) * (self.risk_pct)
             spread = abs(tick.bid-tick.ask)
             
-            if symbol in self.symbols[:3]:
-                min_quantity = 0.10
-            if symbol in self.symbols[3:]:
-                min_quantity = 0.01
+            # if symbol in self.symbols[:3]:
+            #     min_quantity = 0.10
+            if symbol in self.symbols:  #self.symbols[3:]
+                min_quantity = 0.1
 
             if signal == 2 and long_positions==0:
                 sl = round(tick.ask - (self.sl_factor * atr) - spread, 5)
@@ -292,10 +292,10 @@ class MysteryOfTheMissingHeart:
         # signals_df.to_csv("volatilitysignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["US100", "GER30.sml", "US30","USDJPY.sml"] # "GBPUSD.sml", "EURUSD.sml"
+    symbols = ["GBPUSD.sml", "EURUSD.sml", "USDJPY.sml"] # "US100", "GER30.sml", "US30"
     last_action_timestamp = 0
     last_display_timestamp = 0
-    trader = MysteryOfTheMissingHeart(symbols, 0.05)
+    trader = MysteryOfTheMissingHeart(symbols, 0.10)
     while True:
         current_time = datetime.now()
         # Launch the algorithm
