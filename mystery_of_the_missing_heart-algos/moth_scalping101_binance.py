@@ -19,8 +19,8 @@ secret_key = os.getenv("secret_key")
 client = Client(api_key = api_key, api_secret = secret_key, tld = "com", testnet = True) #  testnet = True
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.5
+    sl_factor = 1.5
+    tp_factor = 2
 
     def __init__(self, symbols, risk_pct, leverage = 5):
         #Initialize client request
