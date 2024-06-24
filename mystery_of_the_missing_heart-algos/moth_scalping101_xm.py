@@ -19,8 +19,8 @@ path = os.getenv("pathXM")
 #     raise ValueError("Please set the environment variables METATRADER_LOGIN_ID, METATRADER_PASSWORD and METATRADER_SERVER")
 
 class MysteryOfTheMissingHeart:
-    sl_factor = 1
-    tp_factor = 1.5
+    sl_factor = 1.2
+    tp_factor = sl_factor * 1.5
 
     def __init__(self, symbols, risk_pct):
         self.symbols = symbols
@@ -46,7 +46,7 @@ class MysteryOfTheMissingHeart:
                 return False
         return True
 
-    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M15): #changed timeframe
+    def get_hist_data(self, symbol, n_bars, timeframe=mt5.TIMEFRAME_M1): #changed timeframe
         """ Function to import the data of the chosen symbol"""
         # Initialize the connection if there is not
         mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password)
@@ -128,8 +128,34 @@ class MysteryOfTheMissingHeart:
         # Generate the signals based on the strategy rules
         def generate_signal(ohlc: pd.DataFrame) -> pd.DataFrame:
             # Calculate William Fractals
-            ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(3, center=True).max(), ohlc["High"], np.nan)
-            ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(3, center=True).min(), ohlc["Low"], np.nan)
+            def fractals(ohlc: pd.DataFrame) -> pd.DataFrame:
+                ohlc = ohlc.reset_index()
+                def isPivot(candle, window):
+                    if candle-window < 0 or candle+window >= len(ohlc):
+                        return 0
+                    pivotHigh = 1
+                    pivotLow = 2
+                    for i in range(candle-window, candle+window+1):
+                        if ohlc.iloc[candle].Low > ohlc.iloc[i].Low:
+                            pivotLow=0
+                        if ohlc.iloc[candle].High < ohlc.iloc[i].High:
+                            pivotHigh=0
+                    if (pivotHigh and pivotLow):
+                        return 3
+                    elif pivotHigh:
+                        return pivotHigh
+                    elif pivotLow:
+                        return pivotLow
+                    else:
+                        return 0
+
+                window=3
+                ohlc['isPivot'] = ohlc.apply(lambda x: isPivot(x.name,window), axis=1)
+                ohlc = ohlc.set_index("Date")
+                return ohlc
+            #ohlc["william_bearish"] =  np.where(ohlc["High"] == ohlc["High"].rolling(5, center=True).max(), ohlc["High"], np.nan)
+            #ohlc["william_bullish"] =  np.where(ohlc["Low"] == ohlc["Low"].rolling(5, center=True).min(), ohlc["Low"], np.nan)
+            ohlc = fractals(ohlc)
             
             # Calculate RSI 
             ohlc["rsi"] = ta.rsi(ohlc.Close)
@@ -159,19 +185,23 @@ class MysteryOfTheMissingHeart:
             signal = [0]*len(ohlc)
 
             for row in range(0, len(ohlc)):
+                #and ohlc.william_bearish[row] > 0
+                #and ohlc.william_bullish[row] > 0
+                
                 signal[row] = 0
-                if ohlc.ema_signal[row]==1 and ohlc.rsi[row] < 50 and ohlc.william_bearish[row] > 0 and ohlc.Close[row] < ohlc.ema21[row] and ohlc.Close[row] < ohlc.ema50[row] and ohlc.Close[row] < ohlc.ema200[row]:
+                if ohlc.ema_signal[row]==1 and ohlc.rsi[row] < 50 and ohlc.isPivot[row]==1 and ohlc.Close[row] < ohlc.ema21[row] and ohlc.Close[row] < ohlc.ema50[row] and ohlc.Close[row] < ohlc.ema200[row]:
                     signal[row]=1
 
-                if ohlc.ema_signal[row]==2 and ohlc.rsi[row] > 50 and ohlc.william_bullish[row] > 0 and ohlc.Close[row] > ohlc.ema21[row] and ohlc.Close[row] > ohlc.ema50[row] and ohlc.Close[row] > ohlc.ema200[row]:
+                if ohlc.ema_signal[row]==2 and ohlc.rsi[row] > 50 and ohlc.isPivot[row]==2 and ohlc.Close[row] > ohlc.ema21[row] and ohlc.Close[row] > ohlc.ema50[row] and ohlc.Close[row] > ohlc.ema200[row]:
                     signal[row]=2   
 
             ohlc['signal'] = signal
 
-            return ohlc 
+            return ohlc  
 
         signals_df = generate_signal(symbol_df)
         # print(signals_df.Close.values[-20:])
+        print(f"Fractal values: {signals_df.isPivot.values[-10:]}")
         print(signals_df.signal.values[-10:])
         signal_value = signals_df.signal.values[-2]
         # symbol_df['signal'] = signal
@@ -293,7 +323,7 @@ class MysteryOfTheMissingHeart:
         # signals_df.to_csv("fxcfdsignals_df.csv")
 
 if __name__ == "__main__":
-    symbols = ["GBPUSD", "USDJPY", "EURUSD"] #"US100Cash", "GER40Cash", "US30Cash", 
+    symbols = ["US100Cash", "GER40Cash", "US30Cash"] #"GBPUSD", "USDJPY", "EURUSD"
     last_action_timestamp = 0
     last_display_timestamp = 0
     trader = MysteryOfTheMissingHeart(symbols, 0.02)
@@ -301,7 +331,7 @@ if __name__ == "__main__":
         current_time = datetime.now()
         # Launch the algorithm
         current_timestamp = int(time.time())
-        if (current_timestamp - last_action_timestamp) >= 900:
+        if (current_timestamp - last_action_timestamp) >= 60: #900
             start_time = time.time()
             # Account Info
             if mt5.initialize(path=path, login=mt_login_id, server=mt_server_name, password=mt_password):
