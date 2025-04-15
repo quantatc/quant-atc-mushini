@@ -2,6 +2,43 @@
 
 A modular trading system supporting multiple strategies and brokers.
 
+## Getting Started
+
+### Setting up the Development Environment
+
+1. Create a Python virtual environment:
+```bash
+python -m venv venv
+```
+
+2. Activate the virtual environment:
+
+   - On Windows (PowerShell):
+   ```bash
+   Set-ExecutionPolicy RemoteSigned -Scope Process
+   .\venv\Scripts\activate
+   ```
+   
+   - On Windows (Command Prompt):
+   ```bash
+   venv\Scripts\activate.bat
+   ```
+   
+   - On Unix or MacOS:
+   ```bash
+   source venv/bin/activate
+   ```
+
+3. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+4. Install the package in development mode:
+```bash
+pip install -e .
+```
+
 ## Setup
 
 1. Install dependencies:
@@ -30,32 +67,6 @@ mt_server_name5=your_server
 path5=path_to_mt5
 ```
 
-## Dashboard (Web UI)
-
-A web dashboard is provided for interactive management of trading strategies.
-
-### Launch the Dashboard
-
-```bash
-cd dashboard
-python app.py
-```
-
-Visit [http://localhost:5000](http://localhost:5000) in your browser.
-
-### Features
-- View available strategies
-- Start and stop strategies with one click
-- Select broker and symbol type for each strategy
-- See real-time status (Running, Stopped, Error)
-- View logs for each strategy directly in the dashboard
-- (More features coming soon: authentication, real-time updates)
-
-### How it works
-- Strategies are run as background processes. The dashboard manages their lifecycle and status.
-- Each strategy logs to its own file (see the "View Log" button).
-- The dashboard uses Flask and Bootstrap for the web interface.
-
 ## Available Strategies
 
 ### Mean Reversion
@@ -76,14 +87,8 @@ Visit [http://localhost:5000](http://localhost:5000) in your browser.
 
 ## Usage
 
-### Recommended: Use the Dashboard
+You can start a strategy directly from Python:
 
-1. Launch the dashboard as described above.
-2. Use the web interface to start/stop strategies and monitor their status.
-
-### Programmatic Usage
-
-You can also start a strategy directly from Python:
 ```python
 from main import run_strategy
 
@@ -96,6 +101,8 @@ run_strategy('momentum', 'Oanda', 'indices')
 # Run mean reversion on crypto with Exness
 run_strategy('mean_reversion', 'Exness', 'crypto')
 ```
+
+To stop a running strategy, use Ctrl+C in the terminal.
 
 ## Adding New Strategies
 
@@ -135,11 +142,5 @@ quant-atc-mushini/
 │       ├── momentum.py
 │       └── scalping.py
 ├── main.py                # Main execution script
-├── requirements.txt       # Dependencies
-└── dashboard/             # Web dashboard (Flask app)
-    ├── app.py
-    └── templates/
-        ├── base.html
-        └── index.html
-```
+└── requirements.txt       # Dependencies
 
