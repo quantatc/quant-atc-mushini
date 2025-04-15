@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Strategy</th>
+            <th>Status</th>
+            <th>Broker</th>
+            <th>Symbol Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for strategy in strategies %}
+        <tr>
+            <form method="post" action="{{ url_for('start_strategy', strategy=strategy) }}">
+            <td>{{ strategy }}</td>
+            <td>
+                {% set status = statuses[strategy] %}
+                {% if status == 'running' %}
+                    <span class="badge bg-success">Running</span>
+                {% elif status == 'stopped' %}
+                    <span class="badge bg-secondary">Stopped</span>
+                {% elif status == 'error' %}
+                    <span class="badge bg-danger">Error</span>
+                {% else %}
+                    <span class="badge bg-warning">{{ status }}</span>
+                {% endif %}
+            </td>
+            <td>
+                <select name="broker" class="form-select form-select-sm" {% if status == 'running' %}disabled{% endif %}>
+                    {% for broker in brokers %}
+                        <option value="{{ broker }}">{{ broker }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <select name="symbol_type" class="form-select form-select-sm" {% if status == 'running' %}disabled{% endif %}>
+                    {% for symbol_type in symbol_types %}
+                        <option value="{{ symbol_type }}">{{ symbol_type }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <button type="submit" class="btn btn-success btn-sm" {% if status == 'running' %}disabled{% endif %}>Start</button>
+                <a href="{{ url_for('stop_strategy', strategy=strategy) }}" class="btn btn-danger btn-sm {% if status != 'running' %}disabled{% endif %}">Stop</a>
+                <a href="{{ url_for('view_log', strategy=strategy) }}" class="btn btn-info btn-sm">View Log</a>
+            </td>
+            </form>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
